@@ -1,23 +1,29 @@
-import { useEffect, useState } from "react";
-import AdminProductList from "../components/AdminProductList.jsx";
-import AdminReportList from "../components/AdminReportList.jsx";
-import PageState from "../components/PageState.jsx";
-import { REPORT_STATUSES } from "../data/constants.js";
-import { getProducts, getReports, getUsers, updateProduct, updateReport } from "../services/api.js";
+import { useEffect, useState } from 'react';
+import AdminProductList from '../components/AdminProductList.jsx';
+import AdminReportList from '../components/AdminReportList.jsx';
+import PageState from '../components/PageState.jsx';
+import { REPORT_STATUSES } from '../data/constants.js';
+import {
+  getProducts,
+  getReports,
+  getUsers,
+  updateProduct,
+  updateReport,
+} from '../services/api.js';
 
 const tabs = [
-  { id: "products", label: "ประกาศทั้งหมด" },
-  { id: "reports", label: "รายงาน" },
+  { id: 'products', label: 'ประกาศทั้งหมด' },
+  { id: 'reports', label: 'รายงาน' },
 ];
 
 export default function AdminPage() {
   const [data, setData] = useState(null);
-  const [activeTab, setActiveTab] = useState("products");
-  const [search, setSearch] = useState("");
-  const [reportStatus, setReportStatus] = useState("all");
+  const [activeTab, setActiveTab] = useState('products');
+  const [search, setSearch] = useState('');
+  const [reportStatus, setReportStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [loadCount, setLoadCount] = useState(0);
-  const [loadError, setLoadError] = useState("");
+  const [loadError, setLoadError] = useState('');
   const [action, setAction] = useState(null);
   const [notice, setNotice] = useState(null);
 
@@ -33,7 +39,8 @@ export default function AdminPage() {
         ]);
         if (!controller.signal.aborted) setData({ products, users, reports });
       } catch (error) {
-        if (!controller.signal.aborted) setLoadError(`โหลดข้อมูลผู้ดูแลไม่ได้ ${error.message}`);
+        if (!controller.signal.aborted)
+          setLoadError(`โหลดข้อมูลผู้ดูแลไม่ได้ ${error.message}`);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -45,15 +52,20 @@ export default function AdminPage() {
 
   function handleReload() {
     setLoading(true);
-    setLoadError("");
+    setLoadError('');
     setLoadCount((count) => count + 1);
   }
 
   async function saveVisibility(productId, isHidden) {
-    const updated = await updateProduct(productId, { isHidden, updatedAt: new Date().toISOString() });
+    const updated = await updateProduct(productId, {
+      isHidden,
+      updatedAt: new Date().toISOString(),
+    });
     setData((current) => ({
       ...current,
-      products: current.products.map((product) => (product.id === productId ? updated : product)),
+      products: current.products.map((product) =>
+        product.id === productId ? updated : product,
+      ),
     }));
   }
 
@@ -61,17 +73,22 @@ export default function AdminPage() {
     if (loading || action) return;
 
     const isHidden = !product.isHidden;
-    setAction({ type: "visibility", id: product.id });
+    setAction({ type: 'visibility', id: product.id });
     setNotice(null);
     try {
       await saveVisibility(product.id, isHidden);
-      setNotice({ message: isHidden ? "ซ่อนประกาศแล้ว" : "คืนประกาศให้แสดงในตลาดแล้ว" });
+      setNotice({
+        message: isHidden ? 'ซ่อนประกาศแล้ว' : 'คืนประกาศให้แสดงในตลาดแล้ว',
+      });
     } catch (error) {
       if (error.status === 404) {
-        setNotice({ error: true, message: "ไม่พบประกาศในระบบ" });
+        setNotice({ error: true, message: 'ไม่พบประกาศในระบบ' });
         handleReload();
       } else {
-        setNotice({ error: true, message: `เปลี่ยนการแสดงประกาศไม่ได้ ${error.message}` });
+        setNotice({
+          error: true,
+          message: `เปลี่ยนการแสดงประกาศไม่ได้ ${error.message}`,
+        });
       }
     } finally {
       setAction(null);
@@ -79,9 +96,9 @@ export default function AdminPage() {
   }
 
   async function handleReview(report, productToHide) {
-    if (loading || action || report.status !== "pending") return;
+    if (loading || action || report.status !== 'pending') return;
 
-    setAction({ type: productToHide ? "hide" : "review", id: report.id });
+    setAction({ type: productToHide ? 'hide' : 'review', id: report.id });
     setNotice(null);
     let productWasHidden = false;
 
@@ -92,29 +109,36 @@ export default function AdminPage() {
         productWasHidden = true;
       }
       const updated = await updateReport(report.id, {
-        status: "reviewed",
+        status: 'reviewed',
         reviewedAt: new Date().toISOString(),
       });
       setData((current) => ({
         ...current,
-        reports: current.reports.map((item) => (item.id === report.id ? updated : item)),
+        reports: current.reports.map((item) =>
+          item.id === report.id ? updated : item,
+        ),
       }));
       setNotice({
-        message: productWasHidden ? "ซ่อนประกาศและบันทึกผลตรวจรายงานแล้ว" : "บันทึกผลตรวจรายงานแล้ว",
+        message: productWasHidden
+          ? 'ซ่อนประกาศและบันทึกผลตรวจรายงานแล้ว'
+          : 'บันทึกผลตรวจรายงานแล้ว',
       });
     } catch (error) {
       if (productWasHidden) {
         setNotice({
           error: true,
-          message: "ซ่อนประกาศแล้ว การบันทึกผลตรวจรายงานล้มเหลว หากรายงานยังรอตรวจสอบ กดทำเครื่องหมายว่าตรวจแล้วอีกครั้ง",
+          message:
+            'ซ่อนประกาศแล้ว การบันทึกผลตรวจรายงานล้มเหลว หากรายงานยังรอตรวจสอบ กดทำเครื่องหมายว่าตรวจแล้วอีกครั้ง',
         });
         handleReload();
       } else if (error.status === 404) {
-        const missing = productToHide ? "ประกาศ" : "รายงาน";
+        const missing = productToHide ? 'ประกาศ' : 'รายงาน';
         setNotice({ error: true, message: `ไม่พบ${missing}ในระบบ` });
         handleReload();
       } else {
-        const operation = productToHide ? "ซ่อนประกาศไม่ได้" : "บันทึกผลตรวจรายงานไม่ได้";
+        const operation = productToHide
+          ? 'ซ่อนประกาศไม่ได้'
+          : 'บันทึกผลตรวจรายงานไม่ได้';
         setNotice({ error: true, message: `${operation} ${error.message}` });
       }
     } finally {
@@ -123,24 +147,42 @@ export default function AdminPage() {
   }
 
   const query = search.trim().toLowerCase();
-  const products = data?.products.filter((product) => product.title.toLowerCase().includes(query)) || [];
-  const reports = data?.reports.filter((report) => reportStatus === "all" || report.status === reportStatus) || [];
-  const pendingCount = data?.reports.filter((report) => report.status === "pending").length || 0;
+  const products =
+    data?.products.filter((product) =>
+      product.title.toLowerCase().includes(query),
+    ) || [];
+  const reports =
+    data?.reports.filter(
+      (report) => reportStatus === 'all' || report.status === reportStatus,
+    ) || [];
+  const pendingCount =
+    data?.reports.filter((report) => report.status === 'pending').length || 0;
   const actionsDisabled = loading || Boolean(action);
 
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="page-title">จัดการตลาด</h1>
-        <button type="button" className="btn-secondary" onClick={handleReload} disabled={actionsDisabled}>
-          {loading ? "กำลังโหลด…" : "โหลดใหม่"}
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={handleReload}
+          disabled={actionsDisabled}
+        >
+          {loading ? 'กำลังโหลด…' : 'โหลดใหม่'}
         </button>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-x-5 border-b border-stone-200" aria-label="มุมมองผู้ดูแล" role="group">
+      <div
+        className="mb-5 flex flex-wrap gap-x-5 border-b border-stone-200"
+        aria-label="มุมมองผู้ดูแล"
+        role="group"
+      >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
-          const style = isActive ? "border-orange-600 font-semibold text-orange-800" : "border-transparent text-slate-600";
+          const style = isActive
+            ? 'border-orange-600 font-semibold text-orange-800'
+            : 'border-transparent text-slate-600';
           return (
             <button
               key={tab.id}
@@ -150,9 +192,10 @@ export default function AdminPage() {
               onClick={() => setActiveTab(tab.id)}
             >
               {tab.label}
-              {tab.id === "reports" && pendingCount > 0 && (
+              {tab.id === 'reports' && pendingCount > 0 && (
                 <span className="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-800">
-                  <span className="sr-only">รอตรวจสอบ </span>{pendingCount}
+                  <span className="sr-only">รอตรวจสอบ </span>
+                  {pendingCount}
                 </span>
               )}
             </button>
@@ -162,19 +205,32 @@ export default function AdminPage() {
 
       {notice && (
         <p
-          role={notice.error ? "alert" : "status"}
-          className={`mb-4 rounded-xl border px-4 py-3 text-sm ${notice.error ? "border-red-200 bg-red-50 text-red-800" : "border-orange-200 bg-orange-50 text-orange-900"}`}
+          role={notice.error ? 'alert' : 'status'}
+          className={`mb-4 rounded-xl border px-4 py-3 text-sm ${notice.error ? 'border-red-200 bg-red-50 text-red-800' : 'border-orange-200 bg-orange-50 text-orange-900'}`}
         >
           {notice.message}
         </p>
       )}
-      {loadError && <PageState type="error" message={loadError} onRetry={actionsDisabled ? undefined : handleReload} />}
-      {!data && loading && <PageState type="loading" message="กำลังโหลดข้อมูลผู้ดูแล…" />}
+      {loadError && (
+        <PageState
+          type="error"
+          message={loadError}
+          onRetry={actionsDisabled ? undefined : handleReload}
+        />
+      )}
+      {!data && loading && (
+        <PageState type="loading" message="กำลังโหลดข้อมูลผู้ดูแล…" />
+      )}
 
-      {data && activeTab === "products" && (
+      {data && activeTab === 'products' && (
         <section aria-label="จัดการประกาศ" className="mt-4">
           <div className="mb-4 max-w-sm">
-            <label htmlFor="admin-search" className="mb-1.5 block text-sm font-medium text-slate-700">ค้นหาชื่อประกาศ</label>
+            <label
+              htmlFor="admin-search"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
+            >
+              ค้นหาชื่อประกาศ
+            </label>
             <input
               id="admin-search"
               type="search"
@@ -198,10 +254,15 @@ export default function AdminPage() {
         </section>
       )}
 
-      {data && activeTab === "reports" && (
+      {data && activeTab === 'reports' && (
         <section aria-label="จัดการรายงาน" className="mt-4">
           <div className="mb-4 max-w-xs">
-            <label htmlFor="admin-report-status" className="mb-1.5 block text-sm font-medium text-slate-700">สถานะรายงาน</label>
+            <label
+              htmlFor="admin-report-status"
+              className="mb-1.5 block text-sm font-medium text-slate-700"
+            >
+              สถานะรายงาน
+            </label>
             <select
               id="admin-report-status"
               className="field-control w-full"
@@ -210,7 +271,9 @@ export default function AdminPage() {
             >
               <option value="all">ทั้งหมด</option>
               {Object.entries(REPORT_STATUSES).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
+                <option key={value} value={value}>
+                  {label}
+                </option>
               ))}
             </select>
           </div>

@@ -1,33 +1,61 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import Icon from "../components/Icon.jsx";
-import PageState from "../components/PageState.jsx";
-import ProductImage from "../components/ProductImage.jsx";
-import ReportForm from "../components/ReportForm.jsx";
-import StatusBadge from "../components/StatusBadge.jsx";
-import { CATEGORIES, CONDITIONS, CURRENT_USER_ID, formatPrice } from "../data/constants.js";
-import { createReport, getProduct, getReports, getUsers } from "../services/api.js";
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import Icon from '../components/Icon.jsx';
+import PageState from '../components/PageState.jsx';
+import ProductImage from '../components/ProductImage.jsx';
+import ReportForm from '../components/ReportForm.jsx';
+import StatusBadge from '../components/StatusBadge.jsx';
+import {
+  CATEGORIES,
+  CONDITIONS,
+  CURRENT_USER_ID,
+  formatPrice,
+} from '../data/constants.js';
+import {
+  createReport,
+  getProduct,
+  getReports,
+  getUsers,
+} from '../services/api.js';
 
-const notFound = { type: "empty", message: "ไม่พบสินค้า" };
-const hidden = { type: "empty", message: "ประกาศนี้ไม่พร้อมแสดง" };
-const loading = { type: "loading", message: "กำลังโหลดรายละเอียดสินค้า…" };
+const notFound = { type: 'empty', message: 'ไม่พบสินค้า' };
+const hidden = { type: 'empty', message: 'ประกาศนี้ไม่พร้อมแสดง' };
+const loading = { type: 'loading', message: 'กำลังโหลดรายละเอียดสินค้า…' };
 
 function hasReported(reports, productId) {
-  return reports.some((report) => (
-    report.productId === productId && report.reporterId === CURRENT_USER_ID
-  ));
+  return reports.some(
+    (report) =>
+      report.productId === productId && report.reporterId === CURRENT_USER_ID,
+  );
 }
 
 function SellerContact({ seller }) {
   const channels = seller && [
-    { icon: "line", label: "LINE ID", value: seller.lineId, iconStyle: "bg-green-100 text-green-800" },
-    { icon: "instagram", label: "Instagram", value: seller.instagram, iconStyle: "bg-pink-100 text-pink-800" },
-    { icon: "phone", label: "เบอร์โทร", value: seller.phone, iconStyle: "bg-orange-100 text-orange-800" },
+    {
+      icon: 'line',
+      label: 'LINE ID',
+      value: seller.lineId,
+      iconStyle: 'bg-green-100 text-green-800',
+    },
+    {
+      icon: 'instagram',
+      label: 'Instagram',
+      value: seller.instagram,
+      iconStyle: 'bg-pink-100 text-pink-800',
+    },
+    {
+      icon: 'phone',
+      label: 'เบอร์โทร',
+      value: seller.phone,
+      iconStyle: 'bg-orange-100 text-orange-800',
+    },
   ];
 
   return (
     <section className="mt-5" aria-labelledby="seller-heading">
-      <h2 id="seller-heading" className="text-lg font-bold">ติดต่อผู้ขาย</h2>
+      <h2 id="seller-heading" className="text-lg font-bold">
+        ติดต่อผู้ขาย
+      </h2>
       {seller ? (
         <>
           <p className="mt-1 wrap-anywhere font-medium text-slate-700">
@@ -35,25 +63,34 @@ function SellerContact({ seller }) {
           </p>
           <dl className="mt-3 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-stone-50">
             {channels.map(({ icon, label, value, iconStyle }) => (
-              <div key={icon} className="grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-2.5 py-2.5 sm:gap-3 sm:px-3">
+              <div
+                key={icon}
+                className="grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-2.5 py-2.5 sm:gap-3 sm:px-3"
+              >
                 <dt className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${iconStyle}`}>
+                  <span
+                    className={`grid size-8 shrink-0 place-items-center rounded-lg ${iconStyle}`}
+                  >
                     <Icon name={icon} className="size-[18px]" />
                   </span>
                   {label}
                 </dt>
                 <dd className="wrap-anywhere font-semibold">
                   {value ? (
-                    icon === "phone" ? (
+                    icon === 'phone' ? (
                       <a
                         className="text-orange-800 underline underline-offset-4 hover:text-orange-950"
                         href={`tel:${value}`}
                       >
                         {value}
                       </a>
-                    ) : value
+                    ) : (
+                      value
+                    )
                   ) : (
-                    <span className="text-sm font-normal text-slate-600">ยังไม่ระบุ</span>
+                    <span className="text-sm font-normal text-slate-600">
+                      ยังไม่ระบุ
+                    </span>
                   )}
                 </dd>
               </div>
@@ -72,7 +109,7 @@ function ProductDetails({ productId }) {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [showReportForm, setShowReportForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [submitError, setSubmitError] = useState('');
   const [submittedReport, setSubmittedReport] = useState(false);
 
   useEffect(() => {
@@ -90,12 +127,14 @@ function ProductDetails({ productId }) {
 
         const [users, reports] = await Promise.all([
           getUsers(controller.signal),
-          product.sellerId === CURRENT_USER_ID ? [] : getReports(controller.signal),
+          product.sellerId === CURRENT_USER_ID
+            ? []
+            : getReports(controller.signal),
         ]);
         if (controller.signal.aborted) return;
 
         setPage({
-          type: "ready",
+          type: 'ready',
           product,
           seller: users.find((user) => user.id === product.sellerId),
           alreadyReported: hasReported(reports, product.id),
@@ -105,7 +144,10 @@ function ProductDetails({ productId }) {
         if (!product && error.status === 404) {
           setPage(notFound);
         } else {
-          setPage({ type: "error", message: `โหลดรายละเอียดสินค้าไม่สำเร็จ ${error.message}` });
+          setPage({
+            type: 'error',
+            message: `โหลดรายละเอียดสินค้าไม่สำเร็จ ${error.message}`,
+          });
         }
       }
     }
@@ -120,10 +162,15 @@ function ProductDetails({ productId }) {
   }
 
   async function handleReportSubmit({ reason, details }) {
-    if (submitting || page.product.sellerId === CURRENT_USER_ID || page.alreadyReported) return;
+    if (
+      submitting ||
+      page.product.sellerId === CURRENT_USER_ID ||
+      page.alreadyReported
+    )
+      return;
 
     setSubmitting(true);
-    setSubmitError("");
+    setSubmitError('');
     let product;
 
     try {
@@ -152,7 +199,7 @@ function ProductDetails({ productId }) {
         reporterId: CURRENT_USER_ID,
         reason,
         details,
-        status: "pending",
+        status: 'pending',
         createdAt: new Date().toISOString(),
         reviewedAt: null,
       });
@@ -172,16 +219,16 @@ function ProductDetails({ productId }) {
   }
 
   function handleReportCancel() {
-    setSubmitError("");
+    setSubmitError('');
     setShowReportForm(false);
   }
 
-  if (page.type !== "ready") {
+  if (page.type !== 'ready') {
     return (
       <PageState
         type={page.type}
         message={page.message}
-        onRetry={page.type === "error" ? handleRetry : undefined}
+        onRetry={page.type === 'error' ? handleRetry : undefined}
       />
     );
   }
@@ -199,7 +246,10 @@ function ProductDetails({ productId }) {
         />
       </figure>
 
-      <section className="card-surface min-w-0 p-5 sm:p-7 lg:row-span-2" aria-label="ข้อมูลการซื้อขาย">
+      <section
+        className="card-surface min-w-0 p-5 sm:p-7 lg:row-span-2"
+        aria-label="ข้อมูลการซื้อขาย"
+      >
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-orange-50 px-3 py-1 text-sm font-semibold text-orange-800">
             {CATEGORIES[product.category]}
@@ -207,43 +257,68 @@ function ProductDetails({ productId }) {
           <StatusBadge status={product.status} />
         </div>
         <h1 className="page-title wrap-anywhere">{product.title}</h1>
-        <p className="mt-3 text-3xl font-bold tracking-tight text-orange-700">{formatPrice(product.price)}</p>
+        <p className="mt-3 text-3xl font-bold tracking-tight text-orange-700">
+          {formatPrice(product.price)}
+        </p>
 
         <dl className="mt-6 grid gap-4 border-y border-stone-100 py-5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           <div>
             <dt className="text-sm text-slate-600">สภาพสินค้า</dt>
-            <dd className="mt-1 font-medium">{CONDITIONS[product.condition]}</dd>
+            <dd className="mt-1 font-medium">
+              {CONDITIONS[product.condition]}
+            </dd>
           </div>
           <div>
             <dt className="text-sm text-slate-600">จุดนัดรับ</dt>
-            <dd className="mt-1 wrap-anywhere font-medium">{product.pickupLocation}</dd>
+            <dd className="mt-1 wrap-anywhere font-medium">
+              {product.pickupLocation}
+            </dd>
           </div>
         </dl>
 
         <SellerContact seller={seller} />
 
         {isOwner && (
-          <Link to={`/users/products/${product.id}/edit`} className="btn-secondary mt-6">
+          <Link
+            to={`/users/products/${product.id}/edit`}
+            className="btn-secondary mt-6"
+          >
             แก้ไขประกาศของฉัน
           </Link>
         )}
       </section>
 
       <div className="min-w-0 space-y-5">
-        <section className="card-surface p-5 sm:p-7" aria-labelledby="description-heading">
-          <h2 id="description-heading" className="text-lg font-bold">รายละเอียดสินค้า</h2>
-          <p className="mt-3 wrap-anywhere whitespace-pre-wrap text-slate-700">{product.description}</p>
+        <section
+          className="card-surface p-5 sm:p-7"
+          aria-labelledby="description-heading"
+        >
+          <h2 id="description-heading" className="text-lg font-bold">
+            รายละเอียดสินค้า
+          </h2>
+          <p className="mt-3 wrap-anywhere whitespace-pre-wrap text-slate-700">
+            {product.description}
+          </p>
         </section>
 
         {!isOwner && (
-          <section className="card-surface p-5 sm:p-7" aria-label="รายงานประกาศ">
+          <section
+            className="card-surface p-5 sm:p-7"
+            aria-label="รายงานประกาศ"
+          >
             {alreadyReported && (
               <p className="text-sm font-medium text-slate-700" role="status">
-                {submittedReport ? "ส่งรายงานแล้ว ผู้ดูแลจะตรวจสอบประกาศนี้" : "คุณเคยรายงานประกาศนี้แล้ว"}
+                {submittedReport
+                  ? 'ส่งรายงานแล้ว ผู้ดูแลจะตรวจสอบประกาศนี้'
+                  : 'คุณเคยรายงานประกาศนี้แล้ว'}
               </p>
             )}
             {!alreadyReported && !showReportForm && (
-              <button type="button" className="btn-secondary" onClick={() => setShowReportForm(true)}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowReportForm(true)}
+              >
                 รายงานประกาศ
               </button>
             )}
@@ -271,7 +346,10 @@ export default function ProductDetailsPage() {
 
   return (
     <>
-      <Link to="/users" className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-orange-800">
+      <Link
+        to="/users"
+        className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-orange-800"
+      >
         <span aria-hidden="true">←</span> กลับตลาดสินค้า
       </Link>
       {Number.isSafeInteger(productId) && productId > 0 ? (

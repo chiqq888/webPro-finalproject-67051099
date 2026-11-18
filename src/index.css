@@ -1,7 +1,9 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --font-sans: "IBM Plex Sans Thai Looped", "Leelawadee UI", "Noto Sans Thai", Tahoma, system-ui, sans-serif;
+  --font-sans:
+    'IBM Plex Sans Thai Looped', 'Leelawadee UI', 'Noto Sans Thai', Tahoma,
+    system-ui, sans-serif;
 }
 
 @layer base {
@@ -9,7 +11,8 @@
     @apply min-w-0 bg-[#faf9f7] text-slate-900 antialiased;
   }
 
-  button:not(:disabled), select:not(:disabled) {
+  button:not(:disabled),
+  select:not(:disabled) {
     @apply cursor-pointer;
   }
 

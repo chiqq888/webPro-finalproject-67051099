@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import Icon from '../components/Icon.jsx'
+import { Link } from 'react-router-dom';
+import Icon from '../components/Icon.jsx';
 
 export default function NotFoundPage() {
   return (
@@ -8,7 +8,9 @@ export default function NotFoundPage() {
         <Icon name="search" />
       </div>
       <h1 className="page-title">ไม่พบหน้า</h1>
-      <Link className="btn-primary mt-6" to="/users">กลับตลาดสินค้า</Link>
+      <Link className="btn-primary mt-6" to="/users">
+        กลับตลาดสินค้า
+      </Link>
     </section>
-  )
+  );
 }
