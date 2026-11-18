@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Leelawadee UI", "Noto Sans Thai", Tahoma, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply min-w-0 bg-[#faf9f7] text-slate-900 antialiased;
+  }
+
+  button:not(:disabled), select:not(:disabled) {
+    @apply cursor-pointer;
+  }
+
+  :where(a, button, input, textarea, select):focus-visible {
+    @apply outline-2 outline-offset-2 outline-orange-600;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-orange-700 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-orange-800 disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:border-orange-300 hover:text-orange-700 disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .field-control {
+    @apply block min-h-11 w-full min-w-0 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 disabled:bg-stone-50;
+  }
+
+  .card-surface {
+    @apply rounded-2xl border border-stone-200 bg-white;
+  }
+
+  .page-title {
+    @apply text-3xl leading-tight font-bold tracking-tight text-slate-900 sm:text-4xl;
+  }
+}

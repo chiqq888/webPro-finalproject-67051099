@@ -1,0 +1,5 @@
+{
+  "host": "localhost",
+  "foreignKeySuffix": "_ref",
+  "middlewares": ["./server/product-ids.cjs"]
+}
