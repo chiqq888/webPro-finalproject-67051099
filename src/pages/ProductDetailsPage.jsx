@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import Icon from "../components/Icon.jsx";
 import PageState from "../components/PageState.jsx";
 import ProductImage from "../components/ProductImage.jsx";
 import ReportForm from "../components/ReportForm.jsx";
@@ -15,6 +16,55 @@ function hasReported(reports, productId) {
   return reports.some((report) => (
     report.productId === productId && report.reporterId === CURRENT_USER_ID
   ));
+}
+
+function SellerContact({ seller }) {
+  const channels = seller && [
+    { icon: "line", label: "LINE ID", value: seller.lineId, iconStyle: "bg-green-100 text-green-800" },
+    { icon: "instagram", label: "Instagram", value: seller.instagram, iconStyle: "bg-pink-100 text-pink-800" },
+    { icon: "phone", label: "เบอร์โทร", value: seller.phone, iconStyle: "bg-orange-100 text-orange-800" },
+  ];
+
+  return (
+    <section className="mt-5" aria-labelledby="seller-heading">
+      <h2 id="seller-heading" className="text-lg font-bold">ติดต่อผู้ขาย</h2>
+      {seller ? (
+        <>
+          <p className="mt-1 wrap-anywhere font-medium text-slate-700">
+            {seller.displayName}
+          </p>
+          <dl className="mt-3 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-stone-50">
+            {channels.map(({ icon, label, value, iconStyle }) => (
+              <div key={icon} className="grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-2.5 py-2.5 sm:gap-3 sm:px-3">
+                <dt className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                  <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${iconStyle}`}>
+                    <Icon name={icon} className="size-[18px]" />
+                  </span>
+                  {label}
+                </dt>
+                <dd className="wrap-anywhere font-semibold">
+                  {value ? (
+                    icon === "phone" ? (
+                      <a
+                        className="text-orange-800 underline underline-offset-4 hover:text-orange-950"
+                        href={`tel:${value}`}
+                      >
+                        {value}
+                      </a>
+                    ) : value
+                  ) : (
+                    <span className="text-sm font-normal text-slate-600">ยังไม่ระบุ</span>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      ) : (
+        <p className="mt-2 text-sm text-slate-600">ไม่พบข้อมูลผู้ขาย</p>
+      )}
+    </section>
+  );
 }
 
 function ProductDetails({ productId }) {
@@ -170,27 +220,7 @@ function ProductDetails({ productId }) {
           </div>
         </dl>
 
-        <section className="mt-5" aria-labelledby="seller-heading">
-          <h2 id="seller-heading" className="text-lg font-bold">ติดต่อผู้ขาย</h2>
-          {seller ? (
-            <>
-              <p className="mt-2 wrap-anywhere font-medium">{seller.displayName}</p>
-              {seller.lineId && (
-                <p className="mt-2 wrap-anywhere text-sm text-slate-600">LINE ID {seller.lineId}</p>
-              )}
-              {seller.phone && (
-                <a className="mt-2 inline-block wrap-anywhere text-sm font-medium text-orange-800 underline underline-offset-4" href={`tel:${seller.phone}`}>
-                  โทร {seller.phone}
-                </a>
-              )}
-              {!seller.lineId && !seller.phone && (
-                <p className="mt-2 text-sm text-slate-600">ไม่มีช่องทางติดต่อในโปรไฟล์ผู้ขาย</p>
-              )}
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-slate-600">ไม่พบข้อมูลผู้ขาย</p>
-          )}
-        </section>
+        <SellerContact seller={seller} />
 
         {isOwner && (
           <Link to={`/users/products/${product.id}/edit`} className="btn-secondary mt-6">

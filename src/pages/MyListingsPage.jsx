@@ -125,14 +125,17 @@ export default function MyListingsPage() {
             <div className="flex w-full flex-wrap items-end gap-2 border-t border-stone-100 pt-3 lg:w-auto lg:shrink-0 lg:border-0 lg:pt-0">
               <label className="grid min-w-0 grow gap-1.5 text-xs font-semibold text-slate-600 lg:grow-0">
                 สถานะการขาย
-                <select
-                  className="field-control w-full text-sm lg:w-36"
-                  value={product.status}
-                  onChange={(event) => handleStatusChange(product, event.target.value)}
-                  disabled={workingProductId !== null}
-                >
-                  {Object.entries(PRODUCT_STATUSES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
+                <span className="relative min-w-0 lg:w-36">
+                  <select
+                    className="field-control appearance-none pr-9 forced-colors:appearance-auto forced-colors:pr-3"
+                    value={product.status}
+                    onChange={(event) => handleStatusChange(product, event.target.value)}
+                    disabled={workingProductId !== null}
+                  >
+                    {Object.entries(PRODUCT_STATUSES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                  <Icon name="chevron" className="pointer-events-none absolute inset-y-0 right-3 my-auto size-4 rotate-90 text-slate-600 forced-colors:hidden" />
+                </span>
               </label>
               <Link className="btn-secondary" to={`/users/products/${product.id}/edit`}>แก้ไข</Link>
               <button

@@ -2,22 +2,25 @@
   "users": [
     {
       "id": 1,
-      "displayName": "แพรว • นักศึกษาทดสอบ",
+      "displayName": "แพรว",
       "lineId": "demo_student_1",
+      "instagram": "campus_demo_praew",
       "phone": "",
       "role": "user"
     },
     {
       "id": 2,
-      "displayName": "ต้น • นักศึกษาคณะวิทย์",
+      "displayName": "ต้น",
       "lineId": "demo_seller_a",
+      "instagram": "campus_demo_ton",
       "phone": "",
       "role": "user"
     },
     {
       "id": 3,
-      "displayName": "มิน • นักศึกษาคณะศิลปศาสตร์",
+      "displayName": "มิน",
       "lineId": "demo_seller_b",
+      "instagram": "campus_demo_min",
       "phone": "0800000013",
       "role": "user"
     },
