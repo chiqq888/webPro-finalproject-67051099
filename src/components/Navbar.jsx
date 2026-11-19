@@ -11,9 +11,13 @@ const adminNavItems = [
   { path: '/admin', label: 'จัดการตลาด' },
 ];
 
-export default function Navbar() {
-  const isAdmin = Boolean(useMatch('/admin/*'));
-  const navItems = isAdmin ? adminNavItems : userNavItems;
+export default function Navbar({ user, signingOut, onLogout }) {
+  const onAdminPage = Boolean(useMatch('/admin/*'));
+  const isAdmin = user?.role === 'admin';
+  let navItems = user ? userNavItems : userNavItems.slice(0, 1);
+  if (isAdmin && onAdminPage) navItems = adminNavItems;
+  const accountLinkClass =
+    'rounded-lg border border-stone-200 px-2.5 py-2 text-sm font-semibold whitespace-nowrap text-slate-700 hover:border-orange-300 hover:text-orange-700 sm:px-3.5';
 
   return (
     <header className="border-b border-stone-200/80 bg-white">
@@ -47,18 +51,36 @@ export default function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            to={isAdmin ? '/users' : '/admin/dashboard'}
-            className="rounded-lg border border-stone-200 px-2.5 py-2 text-sm font-semibold text-slate-700 hover:border-orange-300 hover:text-orange-700 sm:px-3.5"
-          >
-            {isAdmin ? 'User' : 'Admin'}
-          </Link>
-          <Link
-            to="/users/sell"
-            className="btn-primary min-h-9 gap-1.5 rounded-lg px-2.5 py-2 whitespace-nowrap sm:px-3.5"
-          >
-            <Icon name="add" className="size-4 shrink-0" /> ลงขาย
-          </Link>
+          {isAdmin && (
+            <Link
+              to={onAdminPage ? '/users' : '/admin/dashboard'}
+              className={accountLinkClass}
+            >
+              {onAdminPage ? 'ตลาด' : 'Admin'}
+            </Link>
+          )}
+          {user ? (
+            <button
+              type="button"
+              className={`${accountLinkClass} disabled:opacity-55`}
+              onClick={onLogout}
+              disabled={signingOut}
+            >
+              {signingOut ? 'กำลังออก…' : 'ออกจากระบบ'}
+            </button>
+          ) : (
+            <Link to="/login" className={accountLinkClass}>
+              เข้าสู่ระบบ
+            </Link>
+          )}
+          {!onAdminPage && (
+            <Link
+              to="/users/sell"
+              className="btn-primary min-h-9 gap-1.5 rounded-lg px-2.5 py-2 whitespace-nowrap sm:px-3.5"
+            >
+              <Icon name="add" className="size-4 shrink-0" /> ลงขาย
+            </Link>
+          )}
         </div>
       </div>
     </header>

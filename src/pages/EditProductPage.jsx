@@ -3,10 +3,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import PageState from '../components/PageState.jsx';
 import ProductForm from '../components/ProductForm.jsx';
-import { CURRENT_USER_ID } from '../data/constants.js';
-import { getProduct, updateProduct } from '../services/api.js';
+import { getMyProduct, updateProduct } from '../services/api.js';
 
-function EditProductContent({ id }) {
+const forbiddenMessage = 'แก้ไขประกาศนี้ไม่ได้ เพราะเป็นประกาศของผู้ขายคนอื่น';
+
+function EditProductContent({ id, userId }) {
   const [load, setLoad] = useState({ status: 'loading' });
   const [reloadCount, setReloadCount] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -18,13 +19,15 @@ function EditProductContent({ id }) {
 
     async function loadProduct() {
       try {
-        const product = await getProduct(id, controller.signal);
+        const product = await getMyProduct(id, controller.signal);
         if (!controller.signal.aborted) setLoad({ status: 'ready', product });
       } catch (requestError) {
         if (controller.signal.aborted) return;
 
         if (requestError.status === 404) {
           setLoad({ status: 'missing' });
+        } else if (requestError.status === 403) {
+          setLoad({ status: 'forbidden' });
         } else {
           setLoad({ status: 'error', message: requestError.message });
         }
@@ -41,24 +44,20 @@ function EditProductContent({ id }) {
   }
 
   async function handleSubmit(productData) {
-    if (saving || load.product?.sellerId !== CURRENT_USER_ID) return;
+    if (saving || load.product?.sellerId !== userId) return;
 
     setSaving(true);
     setError('');
 
     try {
-      await updateProduct(id, {
-        ...productData,
-        updatedAt: new Date().toISOString(),
-      });
+      await updateProduct(id, productData);
       navigate('/users/my-listings', {
         state: { message: 'บันทึกการแก้ไขสำเร็จ' },
       });
     } catch (requestError) {
-      const message =
-        requestError.status === 404
-          ? 'ไม่พบประกาศที่ต้องการแก้ไข'
-          : requestError.message;
+      let message = requestError.message;
+      if (requestError.status === 404) message = 'ไม่พบประกาศที่ต้องการแก้ไข';
+      if (requestError.status === 403) message = forbiddenMessage;
       setError(`บันทึกการแก้ไขไม่สำเร็จ ${message}`);
     } finally {
       setSaving(false);
@@ -74,13 +73,8 @@ function EditProductContent({ id }) {
     content = (
       <PageState type="error" message={load.message} onRetry={handleRetry} />
     );
-  } else if (load.product.sellerId !== CURRENT_USER_ID) {
-    content = (
-      <PageState
-        type="empty"
-        message="แก้ไขประกาศนี้ไม่ได้ เพราะเป็นประกาศของผู้ขายคนอื่น"
-      />
-    );
+  } else if (load.status === 'forbidden' || load.product.sellerId !== userId) {
+    content = <PageState type="empty" message={forbiddenMessage} />;
   } else {
     content = (
       <>
@@ -115,7 +109,13 @@ function EditProductContent({ id }) {
   );
 }
 
-export default function EditProductPage() {
+export default function EditProductPage({ user }) {
   const { id } = useParams();
-  return <EditProductContent id={Number(id)} key={id} />;
+  return (
+    <EditProductContent
+      id={Number(id)}
+      userId={user.id}
+      key={`${user.id}:${id}`}
+    />
+  );
 }

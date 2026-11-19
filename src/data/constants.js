@@ -1,5 +1,3 @@
-export const CURRENT_USER_ID = 1;
-
 export const CATEGORIES = {
   books: 'หนังสือเรียน',
   computers: 'อุปกรณ์คอมพิวเตอร์',

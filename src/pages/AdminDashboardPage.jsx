@@ -8,7 +8,7 @@ import {
   REPORT_REASONS,
   formatReportDate,
 } from '../data/constants.js';
-import { getProducts, getReports } from '../services/api.js';
+import { getAdminProducts, getReports } from '../services/api.js';
 
 const reportsPath = '/admin?tab=reports';
 
@@ -27,7 +27,7 @@ export default function AdminDashboardPage() {
     async function loadData() {
       try {
         const [products, reports] = await Promise.all([
-          getProducts(controller.signal),
+          getAdminProducts(controller.signal),
           getReports(controller.signal),
         ]);
         if (!controller.signal.aborted) setData({ products, reports });

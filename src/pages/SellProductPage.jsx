@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import ProductForm from '../components/ProductForm.jsx';
-import { CURRENT_USER_ID } from '../data/constants.js';
 import { createProduct } from '../services/api.js';
 
 export default function SellProductPage() {
@@ -15,17 +14,9 @@ export default function SellProductPage() {
 
     setSaving(true);
     setError('');
-    const now = new Date().toISOString();
 
     try {
-      await createProduct({
-        ...productData,
-        sellerId: CURRENT_USER_ID,
-        status: 'available',
-        isHidden: false,
-        createdAt: now,
-        updatedAt: now,
-      });
+      await createProduct(productData);
       navigate('/users/my-listings', { state: { message: 'ลงประกาศสำเร็จ' } });
     } catch (requestError) {
       setError(`ลงประกาศไม่สำเร็จ ${requestError.message}`);

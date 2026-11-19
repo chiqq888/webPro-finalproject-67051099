@@ -5,7 +5,7 @@ import AdminReportList from '../components/AdminReportList.jsx';
 import PageState from '../components/PageState.jsx';
 import { REPORT_STATUSES } from '../data/constants.js';
 import {
-  getProducts,
+  getAdminProducts,
   getReports,
   getUsers,
   updateProduct,
@@ -36,7 +36,7 @@ export default function AdminPage() {
     async function loadData() {
       try {
         const [products, users, reports] = await Promise.all([
-          getProducts(controller.signal),
+          getAdminProducts(controller.signal),
           getUsers(controller.signal),
           getReports(controller.signal),
         ]);
@@ -74,7 +74,6 @@ export default function AdminPage() {
   async function saveVisibility(productId, isHidden) {
     const updated = await updateProduct(productId, {
       isHidden,
-      updatedAt: new Date().toISOString(),
     });
     setData((current) => ({
       ...current,
@@ -125,7 +124,6 @@ export default function AdminPage() {
       }
       const updated = await updateReport(report.id, {
         status: 'reviewed',
-        reviewedAt: new Date().toISOString(),
       });
       setData((current) => ({
         ...current,

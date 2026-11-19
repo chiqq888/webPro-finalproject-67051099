@@ -3,10 +3,20 @@ import { Link, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import MyListingCard from '../components/MyListingCard.jsx';
 import PageState from '../components/PageState.jsx';
-import { CURRENT_USER_ID, PRODUCT_STATUSES } from '../data/constants.js';
-import { deleteProduct, getProducts, updateProduct } from '../services/api.js';
+import { PRODUCT_STATUSES } from '../data/constants.js';
+import {
+  deleteProduct,
+  getMyProducts,
+  updateProduct,
+} from '../services/api.js';
 
-export default function MyListingsPage() {
+function getActionErrorMessage(requestError) {
+  if (requestError.status === 403) return 'ไม่มีสิทธิ์จัดการประกาศนี้';
+  if (requestError.status === 404) return 'ไม่พบประกาศนี้';
+  return requestError.message;
+}
+
+function MyListingsContent({ userId }) {
   const location = useLocation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,17 +31,17 @@ export default function MyListingsPage() {
 
     async function loadProducts() {
       try {
-        const allProducts = await getProducts(controller.signal);
+        const myProducts = await getMyProducts(controller.signal);
         if (controller.signal.aborted) return;
 
-        const myProducts = allProducts.filter(
-          (product) => product.sellerId === CURRENT_USER_ID,
+        const ownedProducts = myProducts.filter(
+          (product) => product.sellerId === userId,
         );
-        myProducts.sort(
+        ownedProducts.sort(
           (first, second) =>
             new Date(second.createdAt) - new Date(first.createdAt),
         );
-        setProducts(myProducts);
+        setProducts(ownedProducts);
       } catch (requestError) {
         if (!controller.signal.aborted) setLoadError(requestError.message);
       } finally {
@@ -41,7 +51,7 @@ export default function MyListingsPage() {
 
     loadProducts();
     return () => controller.abort();
-  }, [reloadCount]);
+  }, [reloadCount, userId]);
 
   function handleRetry() {
     setLoadError('');
@@ -50,8 +60,7 @@ export default function MyListingsPage() {
   }
 
   async function handleStatusChange(product, status) {
-    if (product.sellerId !== CURRENT_USER_ID || workingProductId !== null)
-      return;
+    if (product.sellerId !== userId || workingProductId !== null) return;
     if (!Object.hasOwn(PRODUCT_STATUSES, status) || product.status === status)
       return;
 
@@ -61,26 +70,20 @@ export default function MyListingsPage() {
 
     try {
       // เปลี่ยนเฉพาะสถานะขาย ประกาศที่ถูกซ่อนจึงยังคงถูกซ่อน
-      const updatedProduct = await updateProduct(product.id, {
-        status,
-        updatedAt: new Date().toISOString(),
-      });
+      const updatedProduct = await updateProduct(product.id, { status });
       setProducts((current) =>
         current.map((item) => (item.id === product.id ? updatedProduct : item)),
       );
       setMessage('เปลี่ยนสถานะการขายสำเร็จ');
     } catch (requestError) {
-      const message =
-        requestError.status === 404 ? 'ไม่พบประกาศนี้' : requestError.message;
-      setError(`เปลี่ยนสถานะไม่สำเร็จ ${message}`);
+      setError(`เปลี่ยนสถานะไม่สำเร็จ ${getActionErrorMessage(requestError)}`);
     } finally {
       setWorkingProductId(null);
     }
   }
 
   async function handleDelete(product) {
-    if (product.sellerId !== CURRENT_USER_ID || workingProductId !== null)
-      return;
+    if (product.sellerId !== userId || workingProductId !== null) return;
     if (!window.confirm(`ยืนยันการลบประกาศ “${product.title}” หรือไม่?`)) return;
 
     setWorkingProductId(product.id);
@@ -94,9 +97,7 @@ export default function MyListingsPage() {
       );
       setMessage('ลบประกาศสำเร็จ');
     } catch (requestError) {
-      const message =
-        requestError.status === 404 ? 'ไม่พบประกาศนี้' : requestError.message;
-      setError(`ลบประกาศไม่สำเร็จ ${message}`);
+      setError(`ลบประกาศไม่สำเร็จ ${getActionErrorMessage(requestError)}`);
     } finally {
       setWorkingProductId(null);
     }
@@ -152,4 +153,8 @@ export default function MyListingsPage() {
       </div>
     </section>
   );
+}
+
+export default function MyListingsPage({ user }) {
+  return <MyListingsContent userId={user.id} key={user.id} />;
 }

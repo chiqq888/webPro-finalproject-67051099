@@ -1,33 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import PageState from '../components/PageState.jsx';
 import ProductImage from '../components/ProductImage.jsx';
 import ReportForm from '../components/ReportForm.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
-import {
-  CATEGORIES,
-  CONDITIONS,
-  CURRENT_USER_ID,
-  formatPrice,
-} from '../data/constants.js';
+import { CATEGORIES, CONDITIONS, formatPrice } from '../data/constants.js';
 import {
   createReport,
+  getMyReports,
   getProduct,
-  getReports,
   getUsers,
 } from '../services/api.js';
 
 const notFound = { type: 'empty', message: 'ไม่พบสินค้า' };
 const hidden = { type: 'empty', message: 'ประกาศนี้ไม่พร้อมแสดง' };
 const loading = { type: 'loading', message: 'กำลังโหลดรายละเอียดสินค้า…' };
-
-function hasReported(reports, productId) {
-  return reports.some(
-    (report) =>
-      report.productId === productId && report.reporterId === CURRENT_USER_ID,
-  );
-}
 
 function SellerContact({ seller }) {
   const channels = seller && [
@@ -104,13 +92,14 @@ function SellerContact({ seller }) {
   );
 }
 
-function ProductDetails({ productId }) {
+function ProductDetails({ productId, user, pathname }) {
   const [page, setPage] = useState(loading);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [showReportForm, setShowReportForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submittedReport, setSubmittedReport] = useState(false);
+  const userId = user?.id;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -127,9 +116,9 @@ function ProductDetails({ productId }) {
 
         const [users, reports] = await Promise.all([
           getUsers(controller.signal),
-          product.sellerId === CURRENT_USER_ID
-            ? []
-            : getReports(controller.signal),
+          userId && product.sellerId !== userId
+            ? getMyReports(controller.signal)
+            : [],
         ]);
         if (controller.signal.aborted) return;
 
@@ -137,7 +126,9 @@ function ProductDetails({ productId }) {
           type: 'ready',
           product,
           seller: users.find((user) => user.id === product.sellerId),
-          alreadyReported: hasReported(reports, product.id),
+          alreadyReported: reports.some(
+            (report) => report.productId === product.id,
+          ),
         });
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -154,7 +145,7 @@ function ProductDetails({ productId }) {
 
     loadDetails();
     return () => controller.abort();
-  }, [productId, loadAttempt]);
+  }, [productId, userId, loadAttempt]);
 
   function handleRetry() {
     setPage(loading);
@@ -163,53 +154,29 @@ function ProductDetails({ productId }) {
 
   async function handleReportSubmit({ reason, details }) {
     if (
+      !userId ||
       submitting ||
-      page.product.sellerId === CURRENT_USER_ID ||
+      page.type !== 'ready' ||
+      page.product.sellerId === userId ||
       page.alreadyReported
     )
       return;
 
     setSubmitting(true);
     setSubmitError('');
-    let product;
-
     try {
-      product = await getProduct(productId);
-      if (product.isHidden === true) {
-        setPage(hidden);
-        return;
-      }
-      if (product.sellerId === CURRENT_USER_ID) {
-        setPage({ ...page, product });
-        setShowReportForm(false);
-        return;
-      }
-
-      // ตรวจรายงานล่าสุดอีกครั้ง เผื่อผู้ใช้เปิดประกาศเดียวกันไว้หลายแท็บ
-      const reports = await getReports();
-      if (hasReported(reports, product.id)) {
-        setPage({ ...page, alreadyReported: true });
-        setShowReportForm(false);
-        return;
-      }
-
-      await createReport({
-        productId: product.id,
-        productTitle: product.title,
-        reporterId: CURRENT_USER_ID,
-        reason,
-        details,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        reviewedAt: null,
-      });
+      await createReport({ productId, reason, details });
 
       setSubmittedReport(true);
       setPage({ ...page, alreadyReported: true });
       setShowReportForm(false);
     } catch (error) {
-      if (!product && error.status === 404) {
+      if (error.status === 404) {
         setPage(notFound);
+      } else if (error.status === 409) {
+        // หากส่งจากอีกแท็บแล้ว เซิร์ฟเวอร์จะปฏิเสธรายงานซ้ำ
+        setPage({ ...page, alreadyReported: true });
+        setShowReportForm(false);
       } else {
         setSubmitError(`ส่งรายงานไม่สำเร็จ ${error.message} กรุณาลองส่งอีกครั้ง`);
       }
@@ -234,7 +201,7 @@ function ProductDetails({ productId }) {
   }
 
   const { product, seller, alreadyReported } = page;
-  const isOwner = product.sellerId === CURRENT_USER_ID;
+  const isOwner = product.sellerId === userId;
 
   return (
     <article className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start lg:gap-7">
@@ -313,7 +280,16 @@ function ProductDetails({ productId }) {
                   : 'คุณเคยรายงานประกาศนี้แล้ว'}
               </p>
             )}
-            {!alreadyReported && !showReportForm && (
+            {!user && (
+              <Link
+                to="/login"
+                state={{ from: pathname }}
+                className="btn-secondary"
+              >
+                เข้าสู่ระบบเพื่อรายงานประกาศ
+              </Link>
+            )}
+            {user && !alreadyReported && !showReportForm && (
               <button
                 type="button"
                 className="btn-secondary"
@@ -322,7 +298,7 @@ function ProductDetails({ productId }) {
                 รายงานประกาศ
               </button>
             )}
-            {!alreadyReported && showReportForm && (
+            {user && !alreadyReported && showReportForm && (
               <>
                 <h2 className="text-lg font-bold">รายงานประกาศ</h2>
                 <ReportForm
@@ -340,8 +316,9 @@ function ProductDetails({ productId }) {
   );
 }
 
-export default function ProductDetailsPage() {
+export default function ProductDetailsPage({ user }) {
   const { id } = useParams();
+  const { pathname } = useLocation();
   const productId = Number(id);
 
   return (
@@ -353,7 +330,12 @@ export default function ProductDetailsPage() {
         <span aria-hidden="true">←</span> กลับตลาดสินค้า
       </Link>
       {Number.isSafeInteger(productId) && productId > 0 ? (
-        <ProductDetails key={id} productId={productId} />
+        <ProductDetails
+          key={id}
+          productId={productId}
+          user={user}
+          pathname={pathname}
+        />
       ) : (
         <PageState type={notFound.type} message={notFound.message} />
       )}

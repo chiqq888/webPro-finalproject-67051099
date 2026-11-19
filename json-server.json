@@ -1,5 +1,6 @@
 {
   "host": "localhost",
+  "noCors": true,
   "foreignKeySuffix": "_ref",
-  "middlewares": ["./server/product-ids.cjs"]
+  "middlewares": ["./server/auth.cjs", "./server/product-ids.cjs"]
 }
