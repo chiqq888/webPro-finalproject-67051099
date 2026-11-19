@@ -31,11 +31,7 @@ function getFilteredProducts(products, filters, minPrice, maxPrice) {
         product.description.toLowerCase().includes(search)
       );
     })
-    .sort(
-      (first, second) =>
-        new Date(second.createdAt) - new Date(first.createdAt) ||
-        second.id - first.id,
-    );
+    .sort((first, second) => second.id - first.id);
 }
 
 export default function MarketPage() {

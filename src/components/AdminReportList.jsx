@@ -61,12 +61,6 @@ export default function AdminReportList({
                 <strong>ผู้รายงาน</strong>{' '}
                 {reporter?.displayName || `ผู้ใช้ #${report.reporterId}`}
               </p>
-              <p>
-                แจ้งเมื่อ{' '}
-                <time dateTime={report.createdAt}>
-                  {formatReportDate(report.createdAt)}
-                </time>
-              </p>
               {report.reviewedAt && (
                 <p>
                   ตรวจเมื่อ{' '}

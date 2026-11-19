@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# JSON Server database snapshots and temporary writes
+/db-*.json
+/.~db.json
+/.~db-*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -46,6 +46,10 @@ export function login(data) {
   return request('/auth/login', { method: 'POST', data });
 }
 
+export function register(data) {
+  return request('/auth/register', { method: 'POST', data });
+}
+
 export function logout() {
   return request('/auth/logout', { method: 'POST', data: {} });
 }

@@ -1,26 +1,14 @@
 import { useState } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import { login } from '../services/api.js';
 
-export default function LoginPage({ user, onLogin }) {
+export default function LoginPage({ onLogin }) {
   const { state } = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  if (user) {
-    const from = state?.from;
-    const isLocal =
-      typeof from === 'string' &&
-      from.startsWith('/') &&
-      !from.startsWith('//') &&
-      !from.includes('\\') &&
-      !/^\/login(?:[/?#]|$)/i.test(from);
-    const defaultPage = user.role === 'admin' ? '/admin/dashboard' : '/users';
-    return <Navigate to={isLocal ? from : defaultPage} replace />;
-  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -106,6 +94,16 @@ export default function LoginPage({ user, onLogin }) {
             {submitting ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
           </button>
         </form>
+        <p className="mt-5 border-t border-stone-200 pt-5 text-center text-sm text-slate-600">
+          ยังไม่มีบัญชี?{' '}
+          <Link
+            to="/register"
+            state={state}
+            className="rounded-sm font-bold text-orange-800 underline underline-offset-4 hover:text-orange-950"
+          >
+            สมัครสมาชิก
+          </Link>
+        </p>
       </div>
     </section>
   );

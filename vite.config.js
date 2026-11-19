@@ -9,6 +9,12 @@ const proxy = {
     rewrite: (path) => path.slice(4),
   },
 };
+const databaseFiles = [
+  '**/db.json',
+  '**/.~db.json',
+  '**/db-*.json',
+  '**/.~db-*.json',
+];
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -22,15 +28,14 @@ export default defineConfig({
         '.npmrc',
         '.yarnrc.yml',
         '**/.git/**',
-        '**/db.json',
-        '**/.~db.json',
+        ...databaseFiles,
         '**/server/**',
         '**/README.md',
       ],
     },
     watch: {
       // JSON Server เขียนข้อมูลเองระหว่างใช้งาน จึงไม่ต้องรีโหลดหน้า
-      ignored: ['**/db.json', '**/.~db.json'],
+      ignored: databaseFiles,
     },
   },
   preview: { proxy },

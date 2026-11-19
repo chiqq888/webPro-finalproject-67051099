@@ -3,11 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from '../components/Icon.jsx';
 import PageState from '../components/PageState.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
-import {
-  PRODUCT_STATUSES,
-  REPORT_REASONS,
-  formatReportDate,
-} from '../data/constants.js';
+import { PRODUCT_STATUSES, REPORT_REASONS } from '../data/constants.js';
 import { getAdminProducts, getReports } from '../services/api.js';
 
 const reportsPath = '/admin?tab=reports';
@@ -58,10 +54,7 @@ export default function AdminDashboardPage() {
     (report) => report.status === 'pending',
   );
   const oldestReports = pendingReports
-    .sort(
-      (first, second) =>
-        Date.parse(first.createdAt) - Date.parse(second.createdAt),
-    )
+    .sort((first, second) => first.id - second.id)
     .slice(0, 5);
   const summary = [
     { label: 'ประกาศทั้งหมด', count: products.length, icon: 'grid' },
@@ -141,24 +134,13 @@ export default function AdminDashboardPage() {
                     );
 
                     return (
-                      <li
-                        key={report.id}
-                        className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3 last:pb-0"
-                      >
-                        <div className="min-w-0">
-                          <h3 className="font-semibold wrap-break-word">
-                            {product?.title || report.productTitle}
-                          </h3>
-                          <p className="mt-0.5 text-sm text-slate-600">
-                            {REPORT_REASONS[report.reason]}
-                          </p>
-                        </div>
-                        <time
-                          dateTime={report.createdAt}
-                          className="text-sm leading-6 text-slate-600"
-                        >
-                          {formatReportDate(report.createdAt)}
-                        </time>
+                      <li key={report.id} className="py-3 last:pb-0">
+                        <h3 className="font-semibold wrap-break-word">
+                          {product?.title || report.productTitle}
+                        </h3>
+                        <p className="mt-0.5 text-sm text-slate-600">
+                          {REPORT_REASONS[report.reason]}
+                        </p>
                       </li>
                     );
                   })}

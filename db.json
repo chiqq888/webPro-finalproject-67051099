@@ -44,9 +44,7 @@
       "imageUrl": "/images/keyboard.jpg",
       "pickupLocation": "หน้าหอสมุดกลาง",
       "status": "available",
-      "isHidden": false,
-      "createdAt": "2026-11-17T18:00:00.000Z",
-      "updatedAt": "2026-11-18T04:58:32.187Z"
+      "isHidden": false
     },
     {
       "id": 102,
@@ -59,9 +57,7 @@
       "imageUrl": "/images/books.jpg",
       "pickupLocation": "โรงอาหารคณะวิทย์",
       "status": "reserved",
-      "isHidden": false,
-      "createdAt": "2026-11-17T17:00:00.000Z",
-      "updatedAt": "2026-11-17T17:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 103,
@@ -74,9 +70,7 @@
       "imageUrl": "/images/headphones.jpg",
       "pickupLocation": "หน้าอาคารเรียนรวม",
       "status": "available",
-      "isHidden": false,
-      "createdAt": "2026-11-17T16:00:00.000Z",
-      "updatedAt": "2026-11-17T16:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 104,
@@ -89,9 +83,7 @@
       "imageUrl": "/images/lamp.jpg",
       "pickupLocation": "หน้าหอสมุดกลาง",
       "status": "sold",
-      "isHidden": false,
-      "createdAt": "2026-11-17T15:00:00.000Z",
-      "updatedAt": "2026-11-17T15:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 105,
@@ -104,9 +96,7 @@
       "imageUrl": "/images/backpack.jpg",
       "pickupLocation": "ลานกิจกรรมนักศึกษา",
       "status": "available",
-      "isHidden": false,
-      "createdAt": "2026-11-17T14:00:00.000Z",
-      "updatedAt": "2026-11-17T14:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 106,
@@ -119,9 +109,7 @@
       "imageUrl": "/images/camera.jpg",
       "pickupLocation": "หน้าร้านสหกรณ์",
       "status": "available",
-      "isHidden": false,
-      "createdAt": "2026-11-17T13:00:00.000Z",
-      "updatedAt": "2026-11-17T13:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 107,
@@ -134,9 +122,7 @@
       "imageUrl": "/images/mouse.jpg",
       "pickupLocation": "หน้าอาคารคอมพิวเตอร์",
       "status": "available",
-      "isHidden": false,
-      "createdAt": "2026-11-17T12:00:00.000Z",
-      "updatedAt": "2026-11-17T12:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 108,
@@ -149,9 +135,7 @@
       "imageUrl": "/images/bottle.jpg",
       "pickupLocation": "จุดพักรถหน้ามหาวิทยาลัย",
       "status": "available",
-      "isHidden": false,
-      "createdAt": "2026-11-17T11:00:00.000Z",
-      "updatedAt": "2026-11-17T11:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 109,
@@ -164,9 +148,7 @@
       "imageUrl": "/images/umbrella.jpg",
       "pickupLocation": "หน้าหอสมุดกลาง",
       "status": "reserved",
-      "isHidden": false,
-      "createdAt": "2026-11-17T10:00:00.000Z",
-      "updatedAt": "2026-11-17T10:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 110,
@@ -179,9 +161,7 @@
       "imageUrl": "/images/fan.jpg",
       "pickupLocation": "โรงอาหารคณะวิทย์",
       "status": "available",
-      "isHidden": false,
-      "createdAt": "2026-11-17T09:00:00.000Z",
-      "updatedAt": "2026-11-17T09:00:00.000Z"
+      "isHidden": false
     },
     {
       "id": 111,
@@ -194,9 +174,7 @@
       "imageUrl": "/images/calculator.jpg",
       "pickupLocation": "หน้าอาคารเรียนรวม",
       "status": "available",
-      "isHidden": true,
-      "createdAt": "2026-11-17T08:00:00.000Z",
-      "updatedAt": "2026-11-17T08:00:00.000Z"
+      "isHidden": true
     },
     {
       "id": 112,
@@ -209,9 +187,7 @@
       "imageUrl": "/images/speaker.jpg",
       "pickupLocation": "ลานกิจกรรมนักศึกษา",
       "status": "sold",
-      "isHidden": true,
-      "createdAt": "2026-11-17T07:00:00.000Z",
-      "updatedAt": "2026-11-17T07:00:00.000Z"
+      "isHidden": true
     },
     {
       "title": "ไอฟง 18",
@@ -224,8 +200,6 @@
       "sellerId": 1,
       "status": "available",
       "isHidden": false,
-      "createdAt": "2026-11-18T15:01:28.308Z",
-      "updatedAt": "2026-11-18T15:01:28.308Z",
       "id": 113
     },
     {
@@ -239,8 +213,6 @@
       "sellerId": 1,
       "status": "available",
       "isHidden": false,
-      "createdAt": "2026-11-18T15:04:17.846Z",
-      "updatedAt": "2026-11-18T15:04:17.846Z",
       "id": 114
     }
   ],
@@ -252,7 +224,6 @@
       "reason": "inappropriate",
       "details": "ขอให้ผู้ดูแลตรวจสอบข้อความในประกาศตัวอย่างนี้",
       "status": "pending",
-      "createdAt": "2026-11-17T19:00:00.000Z",
       "reviewedAt": null,
       "productTitle": "ชุดหนังสือพื้นฐาน Java"
     },
@@ -263,7 +234,6 @@
       "reason": "other",
       "details": "ขอให้ตรวจสอบว่ารายการอุปกรณ์ที่ให้มาครบตามที่ระบุ",
       "status": "pending",
-      "createdAt": "2026-11-17T19:20:00.000Z",
       "reviewedAt": null,
       "productTitle": "กล้องดิจิทัลคอมแพกต์"
     },
@@ -274,7 +244,6 @@
       "reason": "scam",
       "details": "ข้อมูลประกาศไม่สอดคล้องกัน เป็นรายงานตัวอย่างสำหรับเดโม",
       "status": "reviewed",
-      "createdAt": "2026-11-17T15:00:00.000Z",
       "reviewedAt": "2026-11-17T19:30:00.000Z",
       "productTitle": "ลำโพง Bluetooth พกพา"
     }

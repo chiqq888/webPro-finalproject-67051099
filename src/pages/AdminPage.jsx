@@ -161,13 +161,15 @@ export default function AdminPage() {
 
   const query = search.trim().toLowerCase();
   const products =
-    data?.products.filter((product) =>
-      product.title.toLowerCase().includes(query),
-    ) || [];
+    data?.products
+      .filter((product) => product.title.toLowerCase().includes(query))
+      .sort((first, second) => second.id - first.id) || [];
   const reports =
-    data?.reports.filter(
-      (report) => reportStatus === 'all' || report.status === reportStatus,
-    ) || [];
+    data?.reports
+      .filter(
+        (report) => reportStatus === 'all' || report.status === reportStatus,
+      )
+      .sort((first, second) => second.id - first.id) || [];
   const pendingCount =
     data?.reports.filter((report) => report.status === 'pending').length || 0;
   const actionsDisabled = loading || Boolean(action);

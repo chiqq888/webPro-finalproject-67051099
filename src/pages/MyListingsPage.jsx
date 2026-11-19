@@ -37,10 +37,7 @@ function MyListingsContent({ userId }) {
         const ownedProducts = myProducts.filter(
           (product) => product.sellerId === userId,
         );
-        ownedProducts.sort(
-          (first, second) =>
-            new Date(second.createdAt) - new Date(first.createdAt),
-        );
+        ownedProducts.sort((first, second) => second.id - first.id);
         setProducts(ownedProducts);
       } catch (requestError) {
         if (!controller.signal.aborted) setLoadError(requestError.message);

@@ -17,24 +17,25 @@ const notFound = { type: 'empty', message: 'ไม่พบสินค้า' }
 const hidden = { type: 'empty', message: 'ประกาศนี้ไม่พร้อมแสดง' };
 const loading = { type: 'loading', message: 'กำลังโหลดรายละเอียดสินค้า…' };
 
-function SellerContact({ seller }) {
-  const channels = seller && [
+function SellerContact({ seller, contact }) {
+  const contactInfo = contact ?? seller;
+  const channels = [
     {
       icon: 'line',
       label: 'LINE ID',
-      value: seller.lineId,
+      value: contactInfo?.lineId,
       iconStyle: 'bg-green-100 text-green-800',
     },
     {
       icon: 'instagram',
       label: 'Instagram',
-      value: seller.instagram,
+      value: contactInfo?.instagram,
       iconStyle: 'bg-pink-100 text-pink-800',
     },
     {
       icon: 'phone',
       label: 'เบอร์โทร',
-      value: seller.phone,
+      value: contactInfo?.phone,
       iconStyle: 'bg-orange-100 text-orange-800',
     },
   ];
@@ -45,48 +46,48 @@ function SellerContact({ seller }) {
         ติดต่อผู้ขาย
       </h2>
       {seller ? (
-        <>
-          <p className="mt-1 wrap-anywhere font-medium text-slate-700">
-            {seller.displayName}
-          </p>
-          <dl className="mt-3 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-stone-50">
-            {channels.map(({ icon, label, value, iconStyle }) => (
-              <div
-                key={icon}
-                className="grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-2.5 py-2.5 sm:gap-3 sm:px-3"
-              >
-                <dt className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <span
-                    className={`grid size-8 shrink-0 place-items-center rounded-lg ${iconStyle}`}
-                  >
-                    <Icon name={icon} className="size-[18px]" />
-                  </span>
-                  {label}
-                </dt>
-                <dd className="wrap-anywhere font-semibold">
-                  {value ? (
-                    icon === 'phone' ? (
-                      <a
-                        className="text-orange-800 underline underline-offset-4 hover:text-orange-950"
-                        href={`tel:${value}`}
-                      >
-                        {value}
-                      </a>
-                    ) : (
-                      value
-                    )
-                  ) : (
-                    <span className="text-sm font-normal text-slate-600">
-                      ยังไม่ระบุ
-                    </span>
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </>
+        <p className="mt-1 wrap-anywhere font-medium text-slate-700">
+          {seller.displayName}
+        </p>
       ) : (
         <p className="mt-2 text-sm text-slate-600">ไม่พบข้อมูลผู้ขาย</p>
+      )}
+      {contactInfo && (
+        <dl className="mt-3 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-stone-50">
+          {channels.map(({ icon, label, value, iconStyle }) => (
+            <div
+              key={icon}
+              className="grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-2.5 py-2.5 sm:gap-3 sm:px-3"
+            >
+              <dt className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <span
+                  className={`grid size-8 shrink-0 place-items-center rounded-lg ${iconStyle}`}
+                >
+                  <Icon name={icon} className="size-[18px]" />
+                </span>
+                {label}
+              </dt>
+              <dd className="wrap-anywhere font-semibold">
+                {value ? (
+                  icon === 'phone' ? (
+                    <a
+                      className="text-orange-800 underline underline-offset-4 hover:text-orange-950"
+                      href={`tel:${value.replace(/[\s().-]/g, '')}`}
+                    >
+                      {value}
+                    </a>
+                  ) : (
+                    value
+                  )
+                ) : (
+                  <span className="text-sm font-normal text-slate-600">
+                    ยังไม่ระบุ
+                  </span>
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
       )}
     </section>
   );
@@ -243,7 +244,7 @@ function ProductDetails({ productId, user, pathname }) {
           </div>
         </dl>
 
-        <SellerContact seller={seller} />
+        <SellerContact seller={seller} contact={product.contact} />
 
         {isOwner && (
           <Link

@@ -6,6 +6,7 @@ const {
   PRODUCT_STATUSES,
   REPORT_REASONS,
 } = require('../src/data/constants.js');
+const { validateProductContact } = require('../src/data/product-contact.js');
 const { accounts, unknownAccount } = require('./demo-accounts.cjs');
 
 const derivePassword = promisify(scrypt);
@@ -51,19 +52,7 @@ function clearExpired(entries, now) {
   }
 }
 
-async function handleLogin(req, res, users) {
-  const { username, password } = req.body;
-  if (
-    typeof username !== 'string' ||
-    !username.trim() ||
-    username.length > 50 ||
-    typeof password !== 'string' ||
-    !password ||
-    password.length > 256
-  ) {
-    return sendError(res, 400, 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
-  }
-
+function allowAuthAttempt(req, res) {
   const now = Date.now();
   const key = req.ip;
   clearExpired(loginAttempts, now);
@@ -76,31 +65,160 @@ async function handleLogin(req, res, users) {
       'Retry-After',
       String(Math.ceil((attempts.expiresAt - now) / 1000)),
     );
-    return sendError(res, 429, 'ลองเข้าสู่ระบบหลายครั้งเกินไป กรุณารอสักครู่');
+    sendError(res, 429, 'ลองเข้าสู่ระบบหรือสมัครสมาชิกหลายครั้งเกินไป กรุณารอสักครู่');
+    return false;
   }
   attempts.count += 1;
   loginAttempts.set(key, attempts);
+  return true;
+}
 
-  const account = accounts.get(username.trim().toLowerCase());
-  // ใช้ scrypt และการเปรียบเทียบแบบเดียวกันแม้ไม่พบชื่อผู้ใช้
-  const { salt, hash } = account || unknownAccount;
-  const actualHash = await derivePassword(password, salt, hash.length);
-  const passwordMatches = timingSafeEqual(actualHash, hash);
-  const user = account && users.find((profile) => profile.id === account.id);
-  if (!passwordMatches || !user) {
-    return sendError(res, 401, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-  }
+function findStoredAccount(state, username) {
+  return state.accounts?.find((account) => account.username === username);
+}
 
+function startSession(req, res, user, status = 200) {
+  const now = Date.now();
   clearExpired(sessions, now);
   sessions.delete(sessionToken(req));
   const token = randomBytes(32).toString('hex');
   sessions.set(token, { userId: user.id, expiresAt: now + sessionLifetime });
   return res
+    .status(status)
     .cookie(cookieName, token, {
       ...cookieOptions(req),
       maxAge: sessionLifetime,
     })
     .json(identity(user));
+}
+
+async function handleLogin(req, res, state) {
+  const { username, password } = req.body;
+  if (
+    typeof username !== 'string' ||
+    !username.trim() ||
+    username.length > 50 ||
+    typeof password !== 'string' ||
+    !password ||
+    password.length > 256
+  ) {
+    return sendError(res, 400, 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+  }
+  if (!allowAuthAttempt(req, res)) return;
+
+  const normalizedUsername = username.trim().toLowerCase();
+  const demoAccount = accounts.get(normalizedUsername);
+  const storedAccount = findStoredAccount(state, normalizedUsername);
+  let account = demoAccount;
+  if (
+    !account &&
+    typeof storedAccount?.salt === 'string' &&
+    /^[a-f0-9]{32}$/.test(storedAccount.salt) &&
+    typeof storedAccount.hash === 'string' &&
+    /^[a-f0-9]{128}$/.test(storedAccount.hash)
+  ) {
+    account = {
+      id: storedAccount.userId,
+      salt: storedAccount.salt,
+      hash: Buffer.from(storedAccount.hash, 'hex'),
+    };
+  }
+  // ใช้ scrypt และการเปรียบเทียบแบบเดียวกันแม้ไม่พบชื่อผู้ใช้
+  const { salt, hash } = account || unknownAccount;
+  const actualHash = await derivePassword(password, salt, hash.length);
+  const passwordMatches = timingSafeEqual(actualHash, hash);
+  const user =
+    account && state.users.find((profile) => profile.id === account.id);
+  if (!passwordMatches || !user) {
+    return sendError(res, 401, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+  }
+  return startSession(req, res, user);
+}
+
+function validateRegistration(body) {
+  if (!hasOnlyFields(body, ['displayName', 'username', 'password'])) {
+    return 'ส่งได้เฉพาะข้อมูลที่ใช้สมัครสมาชิก';
+  }
+  const { displayName, username, password } = body;
+  if (
+    typeof displayName !== 'string' ||
+    !textWithin(displayName.trim(), 2, 60)
+  ) {
+    return 'ชื่อที่แสดงต้องยาว 2–60 ตัวอักษร';
+  }
+  if (
+    typeof username !== 'string' ||
+    !/^[a-z0-9][a-z0-9._@+-]{2,49}$/i.test(username.trim())
+  ) {
+    return 'ชื่อบัญชีต้องยาว 3–50 ตัวและเริ่มด้วยตัวอักษรอังกฤษหรือตัวเลข ใช้จุด ขีดล่าง @ + และ - ได้';
+  }
+  if (!textWithin(password, 8, 128)) {
+    return 'รหัสผ่านต้องยาว 8–128 ตัวอักษร';
+  }
+  return '';
+}
+
+function usernameTaken(state, username) {
+  return accounts.has(username) || Boolean(findStoredAccount(state, username));
+}
+
+function saveRegistration(db, username, salt, hash, displayName) {
+  // อ่านอีกครั้งหลังทำแฮช เผื่อมีคำขออื่นใช้ชื่อนี้ไปแล้ว
+  const state = db.getState();
+  if (usernameTaken(state, username)) return null;
+
+  const id =
+    state.users.reduce((highest, user) => Math.max(highest, user.id), 0) + 1;
+  if (!isPositiveId(id)) throw new Error('Invalid user ID');
+
+  const user = {
+    id,
+    displayName,
+    lineId: '',
+    instagram: '',
+    phone: '',
+    role: 'user',
+  };
+  const account = { userId: id, username, salt, hash };
+  const hasAccounts = Object.hasOwn(state, 'accounts');
+  state.accounts ??= [];
+  state.users.push(user);
+  state.accounts.push(account);
+  try {
+    // บันทึกโปรไฟล์และบัญชีลงไฟล์เดียวกันก่อนตอบกลับ
+    db.write();
+  } catch (error) {
+    state.users.pop();
+    state.accounts.pop();
+    if (!hasAccounts) delete state.accounts;
+    throw error;
+  }
+  return user;
+}
+
+async function handleRegistration(req, res) {
+  const invalidInput = validateRegistration(req.body);
+  if (invalidInput) return sendError(res, 400, invalidInput);
+  if (!allowAuthAttempt(req, res)) return;
+
+  const { displayName, username, password } = req.body;
+  const normalizedUsername = username.trim().toLowerCase();
+  const db = req.app.db;
+  if (usernameTaken(db.getState(), normalizedUsername)) {
+    return sendError(res, 409, 'ชื่อบัญชีนี้ถูกใช้แล้ว');
+  }
+
+  const salt = randomBytes(16).toString('hex');
+  const hash = await derivePassword(password, salt, 64);
+  const user = saveRegistration(
+    db,
+    normalizedUsername,
+    salt,
+    hash.toString('hex'),
+    displayName.trim(),
+  );
+  if (!user) return sendError(res, 409, 'ชื่อบัญชีนี้ถูกใช้แล้ว');
+  return startSession(req, res, user, 201);
 }
 
 function acceptsOrigin(req) {
@@ -159,6 +277,31 @@ const productFields = {
     value > 0 &&
     (Number.isInteger(value) || /^\d+\.\d{1,2}$/.test(String(value))),
 };
+
+const productFieldNames = [...Object.keys(productFields), 'contact'];
+const contactFieldNames = ['lineId', 'instagram', 'phone'];
+
+function normalizeContact(input) {
+  const contact = {};
+  for (const field of contactFieldNames) {
+    const value = input[field];
+    contact[field] = typeof value === 'string' ? value.trim() : '';
+  }
+  return contact;
+}
+
+function readProductContact(input) {
+  if (
+    !isObject(input) ||
+    !hasOnlyFields(input, contactFieldNames) ||
+    !Object.values(input).every((value) => typeof value === 'string')
+  ) {
+    return { error: 'กรุณาระบุช่องทางติดต่อในประกาศให้ถูกต้อง' };
+  }
+  const contact = normalizeContact(input);
+  const [error] = Object.values(validateProductContact(contact));
+  return { contact, error };
+}
 
 function readProductFields(body, required = false) {
   const fields = {};
@@ -220,6 +363,9 @@ function handleRead(req, res, state, resource, id) {
     if (product.sellerId !== user.id) {
       return sendError(res, 403, 'จัดการประกาศของผู้ใช้อื่นไม่ได้');
     }
+    if (!isObject(product.contact)) {
+      return res.json({ ...product, contact: normalizeContact(user) });
+    }
     return res.json(product);
   }
   if (path === '/my/reports') {
@@ -232,20 +378,20 @@ function handleRead(req, res, state, resource, id) {
 }
 
 function createProduct(req, res, next, user) {
-  if (!hasOnlyFields(req.body, Object.keys(productFields))) {
+  if (!hasOnlyFields(req.body, productFieldNames)) {
     return sendError(res, 400, 'ส่งได้เฉพาะข้อมูลประกาศ');
   }
   const fields = readProductFields(req.body, true);
   if (!fields) return sendError(res, 400, 'ข้อมูลประกาศไม่ครบหรือไม่ถูกต้อง');
+  const { contact, error } = readProductContact(req.body.contact);
+  if (error) return sendError(res, 400, error);
 
-  const now = new Date().toISOString();
   req.body = {
     ...fields,
+    contact,
     sellerId: user.id,
     status: 'available',
     isHidden: false,
-    createdAt: now,
-    updatedAt: now,
   };
   return next();
 }
@@ -264,10 +410,7 @@ function manageProduct(req, res, next, product, user) {
     ) {
       return sendError(res, 400, 'ส่งได้เฉพาะค่าแสดงหรือซ่อนประกาศ');
     }
-    req.body = {
-      isHidden: req.body.isHidden,
-      updatedAt: new Date().toISOString(),
-    };
+    req.body = { isHidden: req.body.isHidden };
     return next();
   }
 
@@ -282,11 +425,16 @@ function manageProduct(req, res, next, product, user) {
   }
   if (req.method === 'DELETE') return next();
 
-  if (!hasOnlyFields(req.body, [...Object.keys(productFields), 'status'])) {
+  if (!hasOnlyFields(req.body, [...productFieldNames, 'status'])) {
     return sendError(res, 400, 'ระบุได้เฉพาะข้อมูลประกาศและสถานะการขาย');
   }
   const fields = readProductFields(req.body);
   if (!fields) return sendError(res, 400, 'ข้อมูลประกาศไม่ถูกต้อง');
+  if (Object.hasOwn(req.body, 'contact')) {
+    const { contact, error } = readProductContact(req.body.contact);
+    if (error) return sendError(res, 400, error);
+    fields.contact = contact;
+  }
   if (Object.hasOwn(req.body, 'status')) {
     const { status } = req.body;
     if (
@@ -300,7 +448,7 @@ function manageProduct(req, res, next, product, user) {
   if (!Object.keys(fields).length) {
     return sendError(res, 400, 'กรุณาระบุข้อมูลที่ต้องการเปลี่ยน');
   }
-  req.body = { ...fields, updatedAt: new Date().toISOString() };
+  req.body = fields;
   return next();
 }
 
@@ -334,7 +482,6 @@ function createReport(req, res, next, state, user) {
     reason,
     details: details.trim(),
     status: 'pending',
-    createdAt: new Date().toISOString(),
     reviewedAt: null,
   };
   return next();
@@ -359,6 +506,9 @@ module.exports = function campusAccess(req, res, next) {
   if (req.originalUrl.includes('?')) {
     return sendError(res, 400, 'เส้นทาง API นี้ไม่รองรับพารามิเตอร์ใน URL');
   }
+  if (req.get('x-http-method-override') !== undefined) {
+    return sendError(res, 400, 'เส้นทาง API นี้ไม่รองรับการเปลี่ยนวิธีส่งคำขอ');
+  }
 
   const match = /^\/(products|my\/products|reports)\/([1-9]\d*)$/.exec(path);
   const resource = match?.[1];
@@ -369,6 +519,7 @@ module.exports = function campusAccess(req, res, next) {
   if (method === 'GET') return handleRead(req, res, state, resource, id);
 
   const isLogin = method === 'POST' && path === '/auth/login';
+  const isRegistration = method === 'POST' && path === '/auth/register';
   const isLogout = method === 'POST' && path === '/auth/logout';
   const isProductCreate = method === 'POST' && path === '/products';
   const isReportCreate = method === 'POST' && path === '/reports';
@@ -377,6 +528,7 @@ module.exports = function campusAccess(req, res, next) {
   const isReportReview = resource === 'reports' && method === 'PATCH';
   if (
     !isLogin &&
+    !isRegistration &&
     !isLogout &&
     !isProductCreate &&
     !isReportCreate &&
@@ -392,8 +544,9 @@ module.exports = function campusAccess(req, res, next) {
     return res.clearCookie(cookieName, cookieOptions(req)).status(204).end();
   }
 
-  const user = isLogin ? null : sessionUser(req, state.users);
-  if (!isLogin && !user) return sendError(res, 401, 'กรุณาเข้าสู่ระบบ');
+  const isPublicAuth = isLogin || isRegistration;
+  const user = isPublicAuth ? null : sessionUser(req, state.users);
+  if (!isPublicAuth && !user) return sendError(res, 401, 'กรุณาเข้าสู่ระบบ');
   if (
     method !== 'DELETE' &&
     (!req.is('application/json') || !isObject(req.body))
@@ -401,8 +554,13 @@ module.exports = function campusAccess(req, res, next) {
     return sendError(res, 400, 'กรุณาส่งข้อมูลเป็น JSON object');
   }
   if (isLogin) {
-    return handleLogin(req, res, state.users).catch(() =>
+    return handleLogin(req, res, state).catch(() =>
       sendError(res, 500, 'เข้าสู่ระบบไม่ได้ กรุณาลองอีกครั้ง'),
+    );
+  }
+  if (isRegistration) {
+    return handleRegistration(req, res).catch(() =>
+      sendError(res, 500, 'สมัครสมาชิกไม่สำเร็จ กรุณาลองอีกครั้ง'),
     );
   }
   if (isProductCreate) return createProduct(req, res, next, user);

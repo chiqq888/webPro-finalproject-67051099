@@ -17,8 +17,28 @@ import MarketPage from './pages/MarketPage.jsx';
 import MyListingsPage from './pages/MyListingsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import ProductDetailsPage from './pages/ProductDetailsPage.jsx';
+import RegisterPage from './pages/RegisterPage.jsx';
 import SellProductPage from './pages/SellProductPage.jsx';
 import { getSession, logout, SESSION_EXPIRED } from './services/api.js';
+
+function GuestRoute({ user, checking }) {
+  const { state } = useLocation();
+
+  if (checking) {
+    return <PageState type="loading" message="กำลังตรวจสอบบัญชี…" />;
+  }
+  if (!user) return <Outlet />;
+
+  const from = state?.from;
+  const isLocal =
+    typeof from === 'string' &&
+    from.startsWith('/') &&
+    !from.startsWith('//') &&
+    !from.includes('\\') &&
+    !/^\/(login|register)(?:[/?#]|$)/i.test(from);
+  const defaultPage = user.role === 'admin' ? '/admin/dashboard' : '/users';
+  return <Navigate to={isLocal ? from : defaultPage} replace />;
+}
 
 function ProtectedRoute({ user, checking, error, onRetry, adminOnly }) {
   const { pathname, search, hash } = useLocation();
@@ -147,16 +167,16 @@ export default function App() {
             path="/users/products/:id"
             element={<ProductDetailsPage user={user} />}
           />
-          <Route
-            path="/login"
-            element={
-              checking ? (
-                <PageState type="loading" message="กำลังตรวจสอบบัญชี…" />
-              ) : (
-                <LoginPage user={user} onLogin={handleLogin} />
-              )
-            }
-          />
+          <Route element={<GuestRoute user={user} checking={checking} />}>
+            <Route
+              path="/login"
+              element={<LoginPage onLogin={handleLogin} />}
+            />
+            <Route
+              path="/register"
+              element={<RegisterPage onRegister={handleLogin} />}
+            />
+          </Route>
           <Route element={<ProtectedRoute {...routeAuth} />}>
             <Route path="/users/sell" element={<SellProductPage />} />
             <Route

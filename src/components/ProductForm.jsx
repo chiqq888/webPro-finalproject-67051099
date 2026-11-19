@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CATEGORIES, CONDITIONS } from '../data/constants.js';
+import { validateProductContact } from '../data/product-contact.js';
 
 const emptyProduct = {
   title: '',
@@ -92,13 +93,22 @@ export default function ProductForm({
     condition: initialProduct.condition,
     imageUrl: initialProduct.imageUrl,
     pickupLocation: initialProduct.pickupLocation,
+    lineId: initialProduct.contact?.lineId ?? '',
+    instagram: initialProduct.contact?.instagram ?? '',
+    phone: initialProduct.contact?.phone ?? '',
   }));
   const [errors, setErrors] = useState({});
 
   function handleChange(event) {
     const { name, value } = event.target;
     setProduct((previous) => ({ ...previous, [name]: value }));
-    setErrors((previous) => ({ ...previous, [name]: '' }));
+    setErrors((previous) => {
+      const nextErrors = { ...previous, [name]: '' };
+      if (['lineId', 'instagram', 'phone'].includes(name)) {
+        nextErrors.contact = '';
+      }
+      return nextErrors;
+    });
   }
 
   function handleSubmit(event) {
@@ -115,10 +125,18 @@ export default function ProductForm({
       condition: product.condition,
       imageUrl: product.imageUrl.trim(),
       pickupLocation: product.pickupLocation.trim(),
+      contact: {
+        lineId: product.lineId.trim(),
+        instagram: product.instagram.trim(),
+        phone: product.phone.trim(),
+      },
     };
-    const nextErrors = validateProduct(productData, priceText);
+    const nextErrors = {
+      ...validateProduct(productData, priceText),
+      ...validateProductContact(productData.contact),
+    };
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.values(nextErrors).some(Boolean)) return;
 
     onSubmit(productData);
   }
@@ -280,6 +298,89 @@ export default function ProductForm({
             placeholder="เช่น หน้าหอสมุดกลาง"
           />
           <FieldError name="pickupLocation" errors={errors} />
+        </div>
+
+        <div className="border-t border-stone-200 pt-5">
+          <fieldset
+            className="min-w-0"
+            aria-describedby={
+              errors.contact
+                ? 'product-contact-help contact-error'
+                : 'product-contact-help'
+            }
+          >
+            <legend className="text-base font-bold text-slate-900">
+              ช่องทางติดต่อผู้ขาย
+            </legend>
+            <p
+              id="product-contact-help"
+              className="mt-1 text-sm text-slate-600"
+            >
+              ระบุอย่างน้อยหนึ่งช่องทาง ข้อมูลนี้จะแสดงในประกาศนี้
+            </p>
+
+            <div className="mt-4 grid gap-5 sm:grid-cols-3">
+              <div className="min-w-0">
+                <label className={labelClass} htmlFor="product-line-id">
+                  LINE ID
+                </label>
+                <input
+                  className={fieldClass}
+                  id="product-line-id"
+                  name="lineId"
+                  value={product.lineId}
+                  onChange={handleChange}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  aria-invalid={Boolean(errors.lineId)}
+                  aria-describedby={errors.lineId ? 'lineId-error' : undefined}
+                  placeholder="เช่น campus_student"
+                />
+                <FieldError name="lineId" errors={errors} />
+              </div>
+
+              <div className="min-w-0">
+                <label className={labelClass} htmlFor="product-instagram">
+                  Instagram
+                </label>
+                <input
+                  className={fieldClass}
+                  id="product-instagram"
+                  name="instagram"
+                  value={product.instagram}
+                  onChange={handleChange}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  aria-invalid={Boolean(errors.instagram)}
+                  aria-describedby={
+                    errors.instagram ? 'instagram-error' : undefined
+                  }
+                  placeholder="เช่น @campus_student"
+                />
+                <FieldError name="instagram" errors={errors} />
+              </div>
+
+              <div className="min-w-0">
+                <label className={labelClass} htmlFor="product-phone">
+                  เบอร์โทร
+                </label>
+                <input
+                  className={fieldClass}
+                  id="product-phone"
+                  name="phone"
+                  type="tel"
+                  value={product.phone}
+                  onChange={handleChange}
+                  autoComplete="tel"
+                  aria-invalid={Boolean(errors.phone)}
+                  aria-describedby={errors.phone ? 'phone-error' : undefined}
+                  placeholder="เช่น 081-234-5678"
+                />
+                <FieldError name="phone" errors={errors} />
+              </div>
+            </div>
+            <FieldError name="contact" errors={errors} />
+          </fieldset>
         </div>
       </fieldset>
 
