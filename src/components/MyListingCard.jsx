@@ -4,8 +4,8 @@ import {
   PRODUCT_STATUSES,
   formatPrice,
 } from '../data/constants.js';
-import Icon from './Icon.jsx';
 import ProductImage from './ProductImage.jsx';
+import SelectControl from './SelectControl.jsx';
 import StatusBadge from './StatusBadge.jsx';
 
 export default function MyListingCard({
@@ -57,26 +57,19 @@ export default function MyListingCard({
       </div>
 
       <div className="flex w-full flex-wrap items-end gap-2 border-t border-stone-100 pt-3 lg:w-auto lg:shrink-0 lg:border-0 lg:pt-0">
-        <label className="grid min-w-0 grow gap-1.5 text-xs font-semibold text-slate-600 lg:grow-0">
+        <label className="grid min-w-0 grow gap-1.5 text-xs font-semibold text-slate-600 lg:w-36 lg:grow-0">
           สถานะการขาย
-          <span className="relative min-w-0 lg:w-36">
-            <select
-              className="field-control appearance-none pr-9 forced-colors:appearance-auto forced-colors:pr-3"
-              value={product.status}
-              onChange={(event) => onStatusChange(product, event.target.value)}
-              disabled={disabled}
-            >
-              {Object.entries(PRODUCT_STATUSES).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <Icon
-              name="chevron"
-              className="pointer-events-none absolute inset-y-0 right-3 my-auto size-4 rotate-90 text-slate-600 forced-colors:hidden"
-            />
-          </span>
+          <SelectControl
+            value={product.status}
+            onChange={(event) => onStatusChange(product, event.target.value)}
+            disabled={disabled}
+          >
+            {Object.entries(PRODUCT_STATUSES).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectControl>
         </label>
         <Link
           className="btn-secondary"

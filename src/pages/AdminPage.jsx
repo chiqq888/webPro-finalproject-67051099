@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import AdminProductList from '../components/AdminProductList.jsx';
 import AdminReportList from '../components/AdminReportList.jsx';
 import PageState from '../components/PageState.jsx';
+import SelectControl from '../components/SelectControl.jsx';
 import { REPORT_STATUSES } from '../data/constants.js';
 import {
   getAdminProducts,
@@ -278,9 +279,8 @@ export default function AdminPage() {
             >
               สถานะรายงาน
             </label>
-            <select
+            <SelectControl
               id="admin-report-status"
-              className="field-control w-full"
               value={reportStatus}
               onChange={(event) => setReportStatus(event.target.value)}
             >
@@ -290,7 +290,7 @@ export default function AdminPage() {
                   {label}
                 </option>
               ))}
-            </select>
+            </SelectControl>
           </div>
           {reports.length > 0 ? (
             <AdminReportList

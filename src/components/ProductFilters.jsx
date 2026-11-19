@@ -1,5 +1,6 @@
 import { CATEGORIES, CONDITIONS } from '../data/constants.js';
 import Icon from './Icon.jsx';
+import SelectControl from './SelectControl.jsx';
 
 export default function ProductFilters({
   filters,
@@ -96,25 +97,19 @@ export default function ProductFilters({
           >
             สภาพสินค้า
           </label>
-          <div className="relative">
-            <select
-              id="market-condition"
-              className="field-control min-h-9 appearance-none rounded-lg py-1.5 pr-9 pl-2 forced-colors:pr-2 forced-colors:appearance-auto"
-              value={filters.condition}
-              onChange={(event) => onChange('condition', event.target.value)}
-            >
-              <option value="">ทุกสภาพ</option>
-              {Object.entries(CONDITIONS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <Icon
-              name="chevron"
-              className="pointer-events-none absolute inset-y-0 right-3 my-auto size-4 rotate-90 text-slate-600 forced-colors:hidden"
-            />
-          </div>
+          <SelectControl
+            id="market-condition"
+            className="min-h-9 rounded-lg py-1.5 pl-2"
+            value={filters.condition}
+            onChange={(event) => onChange('condition', event.target.value)}
+          >
+            <option value="">ทุกสภาพ</option>
+            {Object.entries(CONDITIONS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectControl>
         </div>
       </div>
     </aside>

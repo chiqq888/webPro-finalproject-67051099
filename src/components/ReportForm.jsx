@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { REPORT_REASONS } from '../data/constants.js';
+import SelectControl from './SelectControl.jsx';
 
 export default function ReportForm({ onSubmit, onCancel, submitting, error }) {
   const [reason, setReason] = useState('');
@@ -36,9 +37,8 @@ export default function ReportForm({ onSubmit, onCancel, submitting, error }) {
         >
           เหตุผล
         </label>
-        <select
+        <SelectControl
           id="report-reason"
-          className="field-control w-full"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           aria-invalid={Boolean(errors.reason)}
@@ -52,7 +52,7 @@ export default function ReportForm({ onSubmit, onCancel, submitting, error }) {
               {label}
             </option>
           ))}
-        </select>
+        </SelectControl>
         {errors.reason && (
           <p
             id="report-reason-error"

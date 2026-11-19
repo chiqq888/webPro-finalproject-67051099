@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CATEGORIES, CONDITIONS } from '../data/constants.js';
 import { validateProductContact } from '../data/product-contact.js';
+import SelectControl from './SelectControl.jsx';
 
 const emptyProduct = {
   title: '',
@@ -212,11 +213,11 @@ export default function ProductForm({
           </div>
 
           <div className="min-w-0">
-            <label className={labelClass} htmlFor="category">
+            <label className={`${labelClass} mb-2`} htmlFor="category">
               หมวดหมู่
             </label>
-            <select
-              className={fieldClass}
+            <SelectControl
+              className="aria-invalid:border-red-600"
               id="category"
               name="category"
               value={product.category}
@@ -231,16 +232,16 @@ export default function ProductForm({
                   {label}
                 </option>
               ))}
-            </select>
+            </SelectControl>
             <FieldError name="category" errors={errors} />
           </div>
 
           <div className="min-w-0">
-            <label className={labelClass} htmlFor="condition">
+            <label className={`${labelClass} mb-2`} htmlFor="condition">
               สภาพสินค้า
             </label>
-            <select
-              className={fieldClass}
+            <SelectControl
+              className="aria-invalid:border-red-600"
               id="condition"
               name="condition"
               value={product.condition}
@@ -257,7 +258,7 @@ export default function ProductForm({
                   {label}
                 </option>
               ))}
-            </select>
+            </SelectControl>
             <FieldError name="condition" errors={errors} />
           </div>
         </div>
