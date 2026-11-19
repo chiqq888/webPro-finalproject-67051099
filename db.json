@@ -212,6 +212,36 @@
       "isHidden": true,
       "createdAt": "2026-11-17T07:00:00.000Z",
       "updatedAt": "2026-11-17T07:00:00.000Z"
+    },
+    {
+      "title": "ไอฟง 18",
+      "description": "ของใหม่ สภาพดี ประกัน 18 ปี",
+      "price": 16000,
+      "category": "computers",
+      "condition": "like_new",
+      "imageUrl": "https://tse1.mm.bing.net/th/id/OIP.JpbF-kjLZ9YDF8HKML4-XAHaFi?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
+      "pickupLocation": "เกกี 3",
+      "sellerId": 1,
+      "status": "available",
+      "isHidden": false,
+      "createdAt": "2026-11-18T15:01:28.308Z",
+      "updatedAt": "2026-11-18T15:01:28.308Z",
+      "id": 113
+    },
+    {
+      "title": "champoo",
+      "description": "ซื้อมา ไม่ได้ใช้",
+      "price": 195,
+      "category": "household",
+      "condition": "like_new",
+      "imageUrl": "https://i.pinimg.com/originals/d3/2f/73/d32f735acd9213ed55993e9ad232228f.jpg",
+      "pickupLocation": "เกกี 3",
+      "sellerId": 1,
+      "status": "available",
+      "isHidden": false,
+      "createdAt": "2026-11-18T15:04:17.846Z",
+      "updatedAt": "2026-11-18T15:04:17.846Z",
+      "id": 114
     }
   ],
   "reports": [
@@ -248,5 +278,8 @@
       "reviewedAt": "2026-11-17T19:30:00.000Z",
       "productTitle": "ลำโพง Bluetooth พกพา"
     }
-  ]
+  ],
+  "meta": {
+    "lastProductId": 114
+  }
 }

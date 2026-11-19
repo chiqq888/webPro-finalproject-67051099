@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
+import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import EditProductPage from './pages/EditProductPage.jsx';
 import MarketPage from './pages/MarketPage.jsx';
@@ -34,6 +35,7 @@ export default function App() {
             path="/users/products/:id/edit"
             element={<EditProductPage />}
           />
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

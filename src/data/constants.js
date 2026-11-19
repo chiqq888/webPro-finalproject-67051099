@@ -36,6 +36,16 @@ const priceFormatter = new Intl.NumberFormat('th-TH', {
   maximumFractionDigits: 2,
 });
 
+const reportDateFormatter = new Intl.DateTimeFormat('th-TH', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Bangkok',
+});
+
 export function formatPrice(price) {
   return `฿${priceFormatter.format(price)}`;
+}
+
+export function formatReportDate(date) {
+  return reportDateFormatter.format(new Date(date));
 }

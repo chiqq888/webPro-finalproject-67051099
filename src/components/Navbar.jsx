@@ -1,14 +1,19 @@
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useMatch } from 'react-router-dom';
 import Icon from './Icon.jsx';
 
-const navItems = [
+const userNavItems = [
   { path: '/users', label: 'ตลาดสินค้า' },
   { path: '/users/my-listings', label: 'ประกาศของฉัน' },
 ];
 
+const adminNavItems = [
+  { path: '/admin/dashboard', label: 'ภาพรวม' },
+  { path: '/admin', label: 'จัดการตลาด' },
+];
+
 export default function Navbar() {
-  const { pathname } = useLocation();
-  const isAdmin = pathname === '/admin';
+  const isAdmin = Boolean(useMatch('/admin/*'));
+  const navItems = isAdmin ? adminNavItems : userNavItems;
 
   return (
     <header className="border-b border-stone-200/80 bg-white">
@@ -43,7 +48,7 @@ export default function Navbar() {
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            to={isAdmin ? '/users' : '/admin'}
+            to={isAdmin ? '/users' : '/admin/dashboard'}
             className="rounded-lg border border-stone-200 px-2.5 py-2 text-sm font-semibold text-slate-700 hover:border-orange-300 hover:text-orange-700 sm:px-3.5"
           >
             {isAdmin ? 'User' : 'Admin'}

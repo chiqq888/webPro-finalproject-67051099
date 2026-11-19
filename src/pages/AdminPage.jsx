@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AdminProductList from '../components/AdminProductList.jsx';
 import AdminReportList from '../components/AdminReportList.jsx';
 import PageState from '../components/PageState.jsx';
@@ -17,8 +18,10 @@ const tabs = [
 ];
 
 export default function AdminPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab =
+    searchParams.get('tab') === 'reports' ? 'reports' : 'products';
   const [data, setData] = useState(null);
-  const [activeTab, setActiveTab] = useState('products');
   const [search, setSearch] = useState('');
   const [reportStatus, setReportStatus] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -54,6 +57,18 @@ export default function AdminPage() {
     setLoading(true);
     setLoadError('');
     setLoadCount((count) => count + 1);
+  }
+
+  function handleTabChange(tabId) {
+    if (tabId === activeTab) return;
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (tabId === 'reports') {
+      nextSearchParams.set('tab', 'reports');
+    } else {
+      nextSearchParams.delete('tab');
+    }
+    setSearchParams(nextSearchParams);
   }
 
   async function saveVisibility(productId, isHidden) {
@@ -189,7 +204,7 @@ export default function AdminPage() {
               type="button"
               aria-pressed={isActive}
               className={`flex items-center gap-1.5 border-b-2 px-1 py-3 text-sm hover:text-orange-800 sm:text-base ${style}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               {tab.label}
               {tab.id === 'reports' && pendingCount > 0 && (

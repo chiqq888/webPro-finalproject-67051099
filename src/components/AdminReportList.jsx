@@ -1,12 +1,10 @@
-import { REPORT_REASONS, formatPrice } from '../data/constants.js';
+import {
+  REPORT_REASONS,
+  formatPrice,
+  formatReportDate,
+} from '../data/constants.js';
 import { AdminVisibilityBadge } from './AdminProductList.jsx';
 import StatusBadge from './StatusBadge.jsx';
-
-const reportDate = new Intl.DateTimeFormat('th-TH', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'Asia/Bangkok',
-});
 
 export default function AdminReportList({
   reports,
@@ -66,14 +64,14 @@ export default function AdminReportList({
               <p>
                 แจ้งเมื่อ{' '}
                 <time dateTime={report.createdAt}>
-                  {reportDate.format(new Date(report.createdAt))}
+                  {formatReportDate(report.createdAt)}
                 </time>
               </p>
               {report.reviewedAt && (
                 <p>
                   ตรวจเมื่อ{' '}
                   <time dateTime={report.reviewedAt}>
-                    {reportDate.format(new Date(report.reviewedAt))}
+                    {formatReportDate(report.reviewedAt)}
                   </time>
                 </p>
               )}
