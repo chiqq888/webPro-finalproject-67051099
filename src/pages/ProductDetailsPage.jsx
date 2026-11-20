@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
+import { AdminVisibilityBadge } from '../components/AdminProductList.jsx';
 import Icon from '../components/Icon.jsx';
 import PageState from '../components/PageState.jsx';
 import ProductImage from '../components/ProductImage.jsx';
@@ -18,24 +19,23 @@ const hidden = { type: 'empty', message: 'ประกาศนี้ไม่�
 const loading = { type: 'loading', message: 'กำลังโหลดรายละเอียดสินค้า…' };
 
 function SellerContact({ seller, contact }) {
-  const contactInfo = contact ?? seller;
   const channels = [
     {
       icon: 'line',
       label: 'LINE ID',
-      value: contactInfo?.lineId,
+      value: contact?.lineId,
       iconStyle: 'bg-green-100 text-green-800',
     },
     {
       icon: 'instagram',
       label: 'Instagram',
-      value: contactInfo?.instagram,
+      value: contact?.instagram,
       iconStyle: 'bg-pink-100 text-pink-800',
     },
     {
       icon: 'phone',
       label: 'เบอร์โทร',
-      value: contactInfo?.phone,
+      value: contact?.phone,
       iconStyle: 'bg-orange-100 text-orange-800',
     },
   ];
@@ -52,7 +52,7 @@ function SellerContact({ seller, contact }) {
       ) : (
         <p className="mt-2 text-sm text-slate-600">ไม่พบข้อมูลผู้ขาย</p>
       )}
-      {contactInfo && (
+      {contact && (
         <dl className="mt-3 divide-y divide-stone-200 rounded-xl border border-stone-200 bg-stone-50">
           {channels.map(({ icon, label, value, iconStyle }) => (
             <div
@@ -101,6 +101,8 @@ function ProductDetails({ productId, user, pathname }) {
   const [submitError, setSubmitError] = useState('');
   const [submittedReport, setSubmittedReport] = useState(false);
   const userId = user?.id;
+  const isAdmin = user?.role === 'admin';
+  const isMember = user?.role === 'user';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -110,14 +112,14 @@ function ProductDetails({ productId, user, pathname }) {
       try {
         product = await getProduct(productId, controller.signal);
         if (controller.signal.aborted) return;
-        if (product.isHidden === true) {
+        if (product.isHidden === true && !isAdmin) {
           setPage(hidden);
           return;
         }
 
         const [users, reports] = await Promise.all([
           getUsers(controller.signal),
-          userId && product.sellerId !== userId
+          isMember && product.sellerId !== userId
             ? getMyReports(controller.signal)
             : [],
         ]);
@@ -146,7 +148,7 @@ function ProductDetails({ productId, user, pathname }) {
 
     loadDetails();
     return () => controller.abort();
-  }, [productId, userId, loadAttempt]);
+  }, [productId, userId, isAdmin, isMember, loadAttempt]);
 
   function handleRetry() {
     setPage(loading);
@@ -155,7 +157,7 @@ function ProductDetails({ productId, user, pathname }) {
 
   async function handleReportSubmit({ reason, details }) {
     if (
-      !userId ||
+      !isMember ||
       submitting ||
       page.type !== 'ready' ||
       page.product.sellerId === userId ||
@@ -202,7 +204,7 @@ function ProductDetails({ productId, user, pathname }) {
   }
 
   const { product, seller, alreadyReported } = page;
-  const isOwner = product.sellerId === userId;
+  const isOwner = isMember && product.sellerId === userId;
 
   return (
     <article className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start lg:gap-7">
@@ -223,6 +225,7 @@ function ProductDetails({ productId, user, pathname }) {
             {CATEGORIES[product.category]}
           </span>
           <StatusBadge status={product.status} />
+          {isAdmin && product.isHidden && <AdminVisibilityBadge isHidden />}
         </div>
         <h1 className="page-title wrap-anywhere">{product.title}</h1>
         <p className="mt-3 text-3xl font-bold tracking-tight text-orange-700">
@@ -269,7 +272,7 @@ function ProductDetails({ productId, user, pathname }) {
           </p>
         </section>
 
-        {!isOwner && (
+        {!isAdmin && !isOwner && (
           <section
             className="card-surface p-5 sm:p-7"
             aria-label="รายงานประกาศ"
@@ -290,7 +293,7 @@ function ProductDetails({ productId, user, pathname }) {
                 เข้าสู่ระบบเพื่อรายงานประกาศ
               </Link>
             )}
-            {user && !alreadyReported && !showReportForm && (
+            {isMember && !alreadyReported && !showReportForm && (
               <button
                 type="button"
                 className="btn-secondary"
@@ -299,7 +302,7 @@ function ProductDetails({ productId, user, pathname }) {
                 รายงานประกาศ
               </button>
             )}
-            {user && !alreadyReported && showReportForm && (
+            {isMember && !alreadyReported && showReportForm && (
               <>
                 <h2 className="text-lg font-bold">รายงานประกาศ</h2>
                 <ReportForm
@@ -319,16 +322,20 @@ function ProductDetails({ productId, user, pathname }) {
 
 export default function ProductDetailsPage({ user }) {
   const { id } = useParams();
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
   const productId = Number(id);
+  const isAdmin = user?.role === 'admin';
+  const marketPath = isAdmin ? '/admin' : '/users';
+  const fromReports = isAdmin && state?.fromReports === true;
 
   return (
     <>
       <Link
-        to="/users"
+        to={fromReports ? '/admin?tab=reports' : marketPath}
         className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-orange-800"
       >
-        <span aria-hidden="true">←</span> กลับตลาดสินค้า
+        <span aria-hidden="true">←</span>{' '}
+        {fromReports ? 'กลับไปรายงาน' : 'กลับตลาดสินค้า'}
       </Link>
       {Number.isSafeInteger(productId) && productId > 0 ? (
         <ProductDetails

@@ -4,11 +4,11 @@ import Icon from './Icon.jsx';
 import ProductImage from './ProductImage.jsx';
 import StatusBadge from './StatusBadge.jsx';
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, to }) {
   return (
     <article className="card-surface min-w-0 shadow-[0_2px_7px_#24190908] transition-shadow hover:shadow-md">
       <Link
-        to={`/users/products/${product.id}`}
+        to={to}
         className="group flex h-full flex-col rounded-2xl"
         aria-label={product.title}
       >

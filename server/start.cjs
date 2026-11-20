@@ -13,11 +13,8 @@ const projectRoot = resolve(__dirname, '..');
 
 function readDatabase(filename) {
   const data = JSON.parse(readFileSync(filename, 'utf8').trim());
-  const { users, products, reports, accounts } = data;
-  if (
-    ![users, products, reports].every(Array.isArray) ||
-    (accounts !== undefined && !Array.isArray(accounts))
-  ) {
+  const { accounts, products, reports } = data;
+  if (![accounts, products, reports].every(Array.isArray)) {
     throw new Error('โครงสร้างข้อมูล Campus Market ไม่ถูกต้อง');
   }
   return data;

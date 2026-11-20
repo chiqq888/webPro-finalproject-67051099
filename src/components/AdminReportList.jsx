@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import {
   REPORT_REASONS,
   formatPrice,
@@ -20,6 +21,7 @@ export default function AdminReportList({
         const product = products.find((item) => item.id === report.productId);
         const reporter = users.find((user) => user.id === report.reporterId);
         const title = product?.title || report.productTitle;
+        const isPending = report.status === 'pending';
         const isSaving = action?.id === report.id;
 
         return (
@@ -70,19 +72,21 @@ export default function AdminReportList({
                 </p>
               )}
             </div>
-            {report.status === 'pending' && (
+            {(product || isPending) && (
               <div className="mt-auto flex flex-wrap gap-2 pt-1">
-                <button
-                  type="button"
-                  className="btn-primary w-full sm:w-auto"
-                  disabled={disabled}
-                  onClick={() => onReview(report)}
-                >
-                  {isSaving && action.type === 'review'
-                    ? 'กำลังบันทึก…'
-                    : 'ทำเครื่องหมายว่าตรวจแล้ว'}
-                </button>
-                {product && !product.isHidden && (
+                {isPending && (
+                  <button
+                    type="button"
+                    className="btn-primary w-full sm:w-auto"
+                    disabled={disabled}
+                    onClick={() => onReview(report)}
+                  >
+                    {isSaving && action.type === 'review'
+                      ? 'กำลังบันทึก…'
+                      : 'ทำเครื่องหมายว่าตรวจแล้ว'}
+                  </button>
+                )}
+                {isPending && product && !product.isHidden && (
                   <button
                     type="button"
                     className="btn-secondary w-full sm:w-auto"
@@ -93,6 +97,16 @@ export default function AdminReportList({
                       ? 'กำลังบันทึก…'
                       : 'ซ่อนประกาศและตรวจแล้ว'}
                   </button>
+                )}
+                {product && (
+                  <Link
+                    to={`/admin/products/${product.id}`}
+                    state={{ fromReports: true }}
+                    className="btn-secondary w-full sm:w-auto"
+                    aria-label={`ไปที่ประกาศ ${title}`}
+                  >
+                    ไปที่ประกาศ
+                  </Link>
                 )}
               </div>
             )}

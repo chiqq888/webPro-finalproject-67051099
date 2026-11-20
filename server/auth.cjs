@@ -7,13 +7,15 @@ const {
   REPORT_REASONS,
 } = require('../src/data/constants.js');
 const { validateProductContact } = require('../src/data/product-contact.js');
-const { accounts, unknownAccount } = require('./demo-accounts.cjs');
 
 const derivePassword = promisify(scrypt);
+const unknownAccountSalt = '0'.repeat(32);
+const unknownAccountHash = Buffer.alloc(64);
 const cookieName = 'campus_session';
 const sessionLifetime = 8 * 60 * 60 * 1000;
 const loginWindow = 60 * 1000;
 const loginLimit = 12;
+const memberOnlyMessage = 'เฉพาะบัญชีสมาชิกเท่านั้น';
 const sessions = new Map();
 const loginAttempts = new Map();
 
@@ -27,7 +29,7 @@ function sessionToken(req) {
   return match?.[1];
 }
 
-function sessionUser(req, users) {
+function sessionUser(req, accounts) {
   const token = sessionToken(req);
   const session = sessions.get(token);
   if (!session) return null;
@@ -35,7 +37,7 @@ function sessionUser(req, users) {
     sessions.delete(token);
     return null;
   }
-  return users.find((user) => user.id === session.userId);
+  return accounts.find((account) => account.id === session.userId);
 }
 
 function identity(user) {
@@ -74,7 +76,11 @@ function allowAuthAttempt(req, res) {
 }
 
 function findStoredAccount(state, username) {
-  return state.accounts?.find((account) => account.username === username);
+  return state.accounts.find(
+    (account) =>
+      typeof account.username === 'string' &&
+      account.username.trim().toLowerCase() === username,
+  );
 }
 
 function startSession(req, res, user, status = 200) {
@@ -107,32 +113,24 @@ async function handleLogin(req, res, state) {
   if (!allowAuthAttempt(req, res)) return;
 
   const normalizedUsername = username.trim().toLowerCase();
-  const demoAccount = accounts.get(normalizedUsername);
-  const storedAccount = findStoredAccount(state, normalizedUsername);
-  let account = demoAccount;
-  if (
-    !account &&
-    typeof storedAccount?.salt === 'string' &&
-    /^[a-f0-9]{32}$/.test(storedAccount.salt) &&
-    typeof storedAccount.hash === 'string' &&
-    /^[a-f0-9]{128}$/.test(storedAccount.hash)
-  ) {
-    account = {
-      id: storedAccount.userId,
-      salt: storedAccount.salt,
-      hash: Buffer.from(storedAccount.hash, 'hex'),
-    };
-  }
+  const account = findStoredAccount(state, normalizedUsername);
+  const hasCredentials =
+    isPositiveId(account?.id) &&
+    typeof account.salt === 'string' &&
+    /^[a-f0-9]{32}$/i.test(account.salt) &&
+    typeof account.hash === 'string' &&
+    /^[a-f0-9]{128}$/i.test(account.hash);
   // ใช้ scrypt และการเปรียบเทียบแบบเดียวกันแม้ไม่พบชื่อผู้ใช้
-  const { salt, hash } = account || unknownAccount;
+  const salt = hasCredentials ? account.salt : unknownAccountSalt;
+  const hash = hasCredentials
+    ? Buffer.from(account.hash, 'hex')
+    : unknownAccountHash;
   const actualHash = await derivePassword(password, salt, hash.length);
   const passwordMatches = timingSafeEqual(actualHash, hash);
-  const user =
-    account && state.users.find((profile) => profile.id === account.id);
-  if (!passwordMatches || !user) {
+  if (!passwordMatches || !hasCredentials) {
     return sendError(res, 401, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
   }
-  return startSession(req, res, user);
+  return startSession(req, res, account);
 }
 
 function validateRegistration(body) {
@@ -158,42 +156,27 @@ function validateRegistration(body) {
   return '';
 }
 
-function usernameTaken(state, username) {
-  return accounts.has(username) || Boolean(findStoredAccount(state, username));
-}
-
 function saveRegistration(db, username, salt, hash, displayName) {
   // อ่านอีกครั้งหลังทำแฮช เผื่อมีคำขออื่นใช้ชื่อนี้ไปแล้ว
   const state = db.getState();
-  if (usernameTaken(state, username)) return null;
+  if (findStoredAccount(state, username)) return null;
 
   const id =
-    state.users.reduce((highest, user) => Math.max(highest, user.id), 0) + 1;
+    state.accounts.reduce(
+      (highest, account) => Math.max(highest, account.id),
+      0,
+    ) + 1;
   if (!isPositiveId(id)) throw new Error('Invalid user ID');
 
-  const user = {
-    id,
-    displayName,
-    lineId: '',
-    instagram: '',
-    phone: '',
-    role: 'user',
-  };
-  const account = { userId: id, username, salt, hash };
-  const hasAccounts = Object.hasOwn(state, 'accounts');
-  state.accounts ??= [];
-  state.users.push(user);
+  const account = { id, displayName, role: 'user', username, salt, hash };
   state.accounts.push(account);
   try {
-    // บันทึกโปรไฟล์และบัญชีลงไฟล์เดียวกันก่อนตอบกลับ
     db.write();
   } catch (error) {
-    state.users.pop();
     state.accounts.pop();
-    if (!hasAccounts) delete state.accounts;
     throw error;
   }
-  return user;
+  return account;
 }
 
 async function handleRegistration(req, res) {
@@ -204,7 +187,7 @@ async function handleRegistration(req, res) {
   const { displayName, username, password } = req.body;
   const normalizedUsername = username.trim().toLowerCase();
   const db = req.app.db;
-  if (usernameTaken(db.getState(), normalizedUsername)) {
+  if (findStoredAccount(db.getState(), normalizedUsername)) {
     return sendError(res, 409, 'ชื่อบัญชีนี้ถูกใช้แล้ว');
   }
 
@@ -317,24 +300,23 @@ function readProductFields(body, required = false) {
 
 function handleRead(req, res, state, resource, id) {
   const { path } = req;
-  const { products, reports, users } = state;
+  const { products, reports, accounts } = state;
   if (path === '/products') {
     return res.json(products.filter((product) => !product.isHidden));
   }
   if (resource === 'products') {
-    const product = products.find((item) => item.id === id && !item.isHidden);
-    if (!product) return sendError(res, 404, 'ไม่พบประกาศ');
+    const product = products.find((item) => item.id === id);
+    if (
+      !product ||
+      (product.isHidden && sessionUser(req, accounts)?.role !== 'admin')
+    ) {
+      return sendError(res, 404, 'ไม่พบประกาศ');
+    }
     return res.json(product);
   }
   if (path === '/users') {
     return res.json(
-      users.map(({ id, displayName, lineId, instagram, phone }) => ({
-        id,
-        displayName,
-        lineId,
-        instagram,
-        phone,
-      })),
+      accounts.map(({ id, displayName }) => ({ id, displayName })),
     );
   }
 
@@ -349,9 +331,12 @@ function handleRead(req, res, state, resource, id) {
     return sendError(res, 404, 'ไม่พบเส้นทาง API');
   }
 
-  const user = sessionUser(req, users);
+  const user = sessionUser(req, accounts);
   if (!user) return sendError(res, 401, 'กรุณาเข้าสู่ระบบ');
   if (path === '/auth/me') return res.json(identity(user));
+  if (path.startsWith('/my/') && user.role !== 'user') {
+    return sendError(res, 403, memberOnlyMessage);
+  }
   if (path === '/my/products') {
     return res.json(products.filter((product) => product.sellerId === user.id));
   }
@@ -362,9 +347,6 @@ function handleRead(req, res, state, resource, id) {
     }
     if (product.sellerId !== user.id) {
       return sendError(res, 403, 'จัดการประกาศของผู้ใช้อื่นไม่ได้');
-    }
-    if (!isObject(product.contact)) {
-      return res.json({ ...product, contact: normalizeContact(user) });
     }
     return res.json(product);
   }
@@ -414,10 +396,8 @@ function manageProduct(req, res, next, product, user) {
     return next();
   }
 
-  if (
-    !product ||
-    (product.isHidden && product.sellerId !== user.id && user.role !== 'admin')
-  ) {
+  if (user.role !== 'user') return sendError(res, 403, memberOnlyMessage);
+  if (!product || (product.isHidden && product.sellerId !== user.id)) {
     return sendError(res, 404, 'ไม่พบประกาศ');
   }
   if (product.sellerId !== user.id) {
@@ -545,8 +525,11 @@ module.exports = function campusAccess(req, res, next) {
   }
 
   const isPublicAuth = isLogin || isRegistration;
-  const user = isPublicAuth ? null : sessionUser(req, state.users);
+  const user = isPublicAuth ? null : sessionUser(req, state.accounts);
   if (!isPublicAuth && !user) return sendError(res, 401, 'กรุณาเข้าสู่ระบบ');
+  if ((isProductCreate || isReportCreate) && user.role !== 'user') {
+    return sendError(res, 403, memberOnlyMessage);
+  }
   if (
     method !== 'DELETE' &&
     (!req.is('application/json') || !isObject(req.body))

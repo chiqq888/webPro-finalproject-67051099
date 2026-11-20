@@ -12,16 +12,20 @@ import {
   updateProduct,
   updateReport,
 } from '../services/api.js';
+import { MarketContent } from './MarketPage.jsx';
 
 const tabs = [
+  { id: 'market', label: 'ตลาดสินค้า' },
   { id: 'products', label: 'ประกาศทั้งหมด' },
   { id: 'reports', label: 'รายงาน' },
 ];
 
 export default function AdminPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab =
-    searchParams.get('tab') === 'reports' ? 'reports' : 'products';
+  const selectedTab = searchParams.get('tab');
+  const activeTab = tabs.some((tab) => tab.id === selectedTab)
+    ? selectedTab
+    : 'market';
   const [data, setData] = useState(null);
   const [search, setSearch] = useState('');
   const [reportStatus, setReportStatus] = useState('all');
@@ -64,10 +68,10 @@ export default function AdminPage() {
     if (tabId === activeTab) return;
 
     const nextSearchParams = new URLSearchParams(searchParams);
-    if (tabId === 'reports') {
-      nextSearchParams.set('tab', 'reports');
-    } else {
+    if (tabId === 'market') {
       nextSearchParams.delete('tab');
+    } else {
+      nextSearchParams.set('tab', tabId);
     }
     setSearchParams(nextSearchParams);
   }
@@ -227,15 +231,26 @@ export default function AdminPage() {
           {notice.message}
         </p>
       )}
-      {loadError && (
+      {loadError && (activeTab !== 'market' || data) && (
         <PageState
           type="error"
           message={loadError}
           onRetry={actionsDisabled ? undefined : handleReload}
         />
       )}
-      {!data && loading && (
+      {!data && loading && activeTab !== 'market' && (
         <PageState type="loading" message="กำลังโหลดข้อมูลผู้ดูแล…" />
+      )}
+
+      {activeTab === 'market' && (
+        <MarketContent
+          products={data?.products ?? []}
+          loading={!data && loading}
+          error={!data ? loadError : ''}
+          onRetry={handleReload}
+          productBasePath="/admin/products"
+          headingLevel={2}
+        />
       )}
 
       {data && activeTab === 'products' && (

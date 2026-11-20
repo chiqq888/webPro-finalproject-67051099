@@ -6,6 +6,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useParams,
 } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import PageState from './components/PageState.jsx';
@@ -36,11 +37,26 @@ function GuestRoute({ user, checking }) {
     !from.startsWith('//') &&
     !from.includes('\\') &&
     !/^\/(login|register)(?:[/?#]|$)/i.test(from);
-  const defaultPage = user.role === 'admin' ? '/admin/dashboard' : '/users';
+  const defaultPage = user.role === 'admin' ? '/admin' : '/users';
   return <Navigate to={isLocal ? from : defaultPage} replace />;
 }
 
-function ProtectedRoute({ user, checking, error, onRetry, adminOnly }) {
+function PublicMarketRoute({ user, checking }) {
+  const { id } = useParams();
+
+  if (checking) {
+    return <PageState type="loading" message="กำลังตรวจสอบบัญชี…" />;
+  }
+  if (user?.role === 'admin') {
+    const destination = id
+      ? `/admin/products/${encodeURIComponent(id)}`
+      : '/admin';
+    return <Navigate to={destination} replace />;
+  }
+  return <Outlet />;
+}
+
+function ProtectedRoute({ user, checking, error, onRetry, requiredRole }) {
   const { pathname, search, hash } = useLocation();
 
   if (checking) {
@@ -58,17 +74,21 @@ function ProtectedRoute({ user, checking, error, onRetry, adminOnly }) {
       />
     );
   }
-  if (adminOnly && user.role !== 'admin') {
-    return (
-      <div className="space-y-4">
-        <PageState type="error" message="หน้านี้สำหรับผู้ดูแลตลาด" />
-        <Link to="/users" className="btn-secondary">
-          กลับตลาดสินค้า
-        </Link>
-      </div>
-    );
+  if (user.role === requiredRole) return <Outlet />;
+
+  if (requiredRole === 'user') {
+    const home = user.role === 'admin' ? '/admin' : '/users';
+    return <Navigate to={home} replace />;
   }
-  return <Outlet />;
+
+  return (
+    <div className="space-y-4">
+      <PageState type="error" message="หน้านี้สำหรับผู้ดูแลตลาด" />
+      <Link to="/users" className="btn-secondary">
+        กลับตลาดสินค้า
+      </Link>
+    </div>
+  );
 }
 
 export default function App() {
@@ -138,6 +158,7 @@ export default function App() {
     error: sessionError,
     onRetry: handleSessionRetry,
   };
+  const showSellLink = !checking && (!user || user.role === 'user');
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -147,7 +168,12 @@ export default function App() {
       >
         ข้ามไปยังเนื้อหาหลัก
       </a>
-      <Navbar user={user} signingOut={signingOut} onLogout={handleLogout} />
+      <Navbar
+        user={user}
+        signingOut={signingOut}
+        showSellLink={showSellLink}
+        onLogout={handleLogout}
+      />
       <main
         id="main"
         className="mx-auto w-full max-w-[84rem] flex-1 px-4 pt-5 pb-12 sm:px-7 sm:pt-7 lg:px-10 lg:pb-16"
@@ -162,11 +188,18 @@ export default function App() {
         )}
         <Routes key={`${pathname}:${user?.id ?? 'guest'}`}>
           <Route path="/" element={<Navigate to="/users" replace />} />
-          <Route path="/users" element={<MarketPage />} />
           <Route
-            path="/users/products/:id"
-            element={<ProductDetailsPage user={user} />}
-          />
+            element={<PublicMarketRoute user={user} checking={checking} />}
+          >
+            <Route
+              path="/users"
+              element={<MarketPage showSellLink={showSellLink} />}
+            />
+            <Route
+              path="/users/products/:id"
+              element={<ProductDetailsPage user={user} />}
+            />
+          </Route>
           <Route element={<GuestRoute user={user} checking={checking} />}>
             <Route
               path="/login"
@@ -177,7 +210,9 @@ export default function App() {
               element={<RegisterPage onRegister={handleLogin} />}
             />
           </Route>
-          <Route element={<ProtectedRoute {...routeAuth} />}>
+          <Route
+            element={<ProtectedRoute {...routeAuth} requiredRole="user" />}
+          >
             <Route path="/users/sell" element={<SellProductPage />} />
             <Route
               path="/users/my-listings"
@@ -188,9 +223,15 @@ export default function App() {
               element={<EditProductPage user={user} />}
             />
           </Route>
-          <Route element={<ProtectedRoute {...routeAuth} adminOnly />}>
+          <Route
+            element={<ProtectedRoute {...routeAuth} requiredRole="admin" />}
+          >
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route
+              path="/admin/products/:id"
+              element={<ProductDetailsPage user={user} />}
+            />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
