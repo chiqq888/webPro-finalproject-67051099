@@ -43,14 +43,14 @@ function EditProductContent({ id, userId }) {
     setReloadCount((count) => count + 1);
   }
 
-  async function handleSubmit(productData) {
+  async function handleSubmit(productData, videoFile) {
     if (saving || load.product?.sellerId !== userId) return;
 
     setSaving(true);
     setError('');
 
     try {
-      await updateProduct(id, productData);
+      await updateProduct(id, productData, videoFile);
       navigate('/users/my-listings', {
         state: { message: 'บันทึกการแก้ไขสำเร็จ' },
       });

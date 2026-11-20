@@ -22,24 +22,35 @@ function readDatabase(filename) {
 
 function startServer({
   databasePath = resolve(projectRoot, 'db.json'),
+  storageDirectory = resolve(dirname(databasePath), 'uploads', 'videos'),
   port = 3001,
 } = {}) {
   const filename = resolve(databasePath);
   const temporaryFile = resolve(dirname(filename), `.~${basename(filename)}`);
   const app = jsonServer.create();
-  const router = jsonServer.router(readDatabase(filename), {
+  const initialData = readDatabase(filename);
+  let savedDatabase = JSON.stringify(initialData);
+  const router = jsonServer.router(initialData, {
     foreignKeySuffix: config.foreignKeySuffix,
   });
   const db = router.db;
 
   db.write = (result) => {
     // เขียนไฟล์ชั่วคราวให้ครบก่อนสลับเข้าแทนไฟล์ข้อมูล
-    writeFileSync(temporaryFile, JSON.stringify(db.getState(), null, 2) + '\n');
-    renameSync(temporaryFile, filename);
+    try {
+      const data = JSON.stringify(db.getState(), null, 2);
+      writeFileSync(temporaryFile, data + '\n');
+      renameSync(temporaryFile, filename);
+      savedDatabase = data;
+    } catch (error) {
+      db.setState(JSON.parse(savedDatabase));
+      throw error;
+    }
     return result;
   };
 
   app.db = db;
+  app.locals.videoStorageDirectory = resolve(storageDirectory);
   app.use(
     jsonServer.defaults({
       noCors: config.noCors,
@@ -56,7 +67,9 @@ function startServer({
     if (current.nlink === 0) return;
 
     try {
-      db.setState(readDatabase(filename));
+      const data = readDatabase(filename);
+      savedDatabase = JSON.stringify(data);
+      db.setState(data);
     } catch (error) {
       console.warn(`โหลดฐานข้อมูลที่แก้ไขไม่ได้ ${error.message}`);
     }

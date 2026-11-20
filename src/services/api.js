@@ -5,7 +5,9 @@ export const SESSION_EXPIRED = 'campus-market:session-expired';
 async function request(path, { method = 'GET', data, signal } = {}) {
   const options = { method, signal, credentials: 'same-origin' };
 
-  if (data !== undefined) {
+  if (data instanceof FormData) {
+    options.body = data;
+  } else if (data !== undefined) {
     options.headers = { 'Content-Type': 'application/json' };
     options.body = JSON.stringify(data);
   }
@@ -78,12 +80,27 @@ export function getAdminProducts(signal) {
   return request('/admin/products', { signal });
 }
 
-export function createProduct(data) {
-  return request('/products', { method: 'POST', data });
+function productRequestBody(data, videoFile) {
+  if (!videoFile) return data;
+
+  const body = new FormData();
+  body.set('product', JSON.stringify(data));
+  body.set('video', videoFile);
+  return body;
 }
 
-export function updateProduct(id, data) {
-  return request(`/products/${id}`, { method: 'PATCH', data });
+export function createProduct(data, videoFile) {
+  return request('/products', {
+    method: 'POST',
+    data: productRequestBody(data, videoFile),
+  });
+}
+
+export function updateProduct(id, data, videoFile) {
+  return request(`/products/${id}`, {
+    method: 'PATCH',
+    data: productRequestBody(data, videoFile),
+  });
 }
 
 export function deleteProduct(id) {

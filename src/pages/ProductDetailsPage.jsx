@@ -7,6 +7,7 @@ import ProductImage from '../components/ProductImage.jsx';
 import ReportForm from '../components/ReportForm.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import { CATEGORIES, CONDITIONS, formatPrice } from '../data/constants.js';
+import { getProductVideoSource } from '../data/product-media.js';
 import {
   createReport,
   getMyReports,
@@ -89,6 +90,67 @@ function SellerContact({ seller, contact }) {
           ))}
         </dl>
       )}
+    </section>
+  );
+}
+
+function ProductVideo({ source }) {
+  const [failed, setFailed] = useState(false);
+
+  let player;
+  if (source.type === 'youtube') {
+    player = (
+      <>
+        <iframe
+          src={`https://www.youtube.com/embed/${source.id}?playsinline=1`}
+          title="วิดีโอสินค้าบน YouTube"
+          loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
+          allow="encrypted-media; picture-in-picture"
+          allowFullScreen
+          className="mt-3 block aspect-video min-h-[200px] w-full rounded-xl bg-black"
+        />
+        <a
+          href={`https://www.youtube.com/watch?v=${source.id}`}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-block text-sm font-semibold text-orange-800 underline underline-offset-4 hover:text-orange-950"
+        >
+          เปิดบน YouTube
+        </a>
+      </>
+    );
+  } else if (failed) {
+    player = (
+      <p className="mt-3 text-sm text-slate-600" role="status">
+        เปิดวิดีโอสินค้าไม่ได้
+      </p>
+    );
+  } else {
+    player = (
+      <video
+        src={source.src}
+        controls
+        playsInline
+        preload="metadata"
+        aria-labelledby="product-video-heading"
+        className="mt-3 aspect-video w-full rounded-xl bg-black object-contain"
+        onError={() => setFailed(true)}
+      >
+        เบราว์เซอร์นี้ไม่รองรับการเล่นวิดีโอ
+      </video>
+    );
+  }
+
+  return (
+    <section
+      className="card-surface min-w-0 p-5 sm:p-7"
+      aria-labelledby="product-video-heading"
+    >
+      <h2 id="product-video-heading" className="text-lg font-bold">
+        วิดีโอสินค้า
+      </h2>
+      {player}
     </section>
   );
 }
@@ -204,6 +266,7 @@ function ProductDetails({ productId, user, pathname }) {
   }
 
   const { product, seller, alreadyReported } = page;
+  const videoSource = getProductVideoSource(product.videoUrl);
   const isOwner = isMember && product.sellerId === userId;
 
   return (
@@ -260,6 +323,10 @@ function ProductDetails({ productId, user, pathname }) {
       </section>
 
       <div className="min-w-0 space-y-5">
+        {videoSource && (
+          <ProductVideo key={product.videoUrl} source={videoSource} />
+        )}
+
         <section
           className="card-surface p-5 sm:p-7"
           aria-labelledby="description-heading"

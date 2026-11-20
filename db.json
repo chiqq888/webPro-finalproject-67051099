@@ -65,7 +65,7 @@
       "imageUrl": "/images/books.jpg",
       "pickupLocation": "โรงอาหารคณะวิทย์",
       "status": "reserved",
-      "isHidden": false,
+      "isHidden": true,
       "contact": {
         "lineId": "demo_seller_a",
         "instagram": "campus_demo_ton",
@@ -245,7 +245,7 @@
       "imageUrl": "/images/speaker.jpg",
       "pickupLocation": "ลานกิจกรรมนักศึกษา",
       "status": "sold",
-      "isHidden": true,
+      "isHidden": false,
       "contact": {
         "lineId": "demo_student_1",
         "instagram": "campus_demo_praew",
@@ -304,7 +304,27 @@
       "sellerId": 100,
       "status": "available",
       "isHidden": false,
-      "id": 115
+      "id": 115,
+      "videoUrl": "https://www.youtube.com/watch?v=XWXKHTb6o3w"
+    },
+    {
+      "title": "iphone 18",
+      "description": "สภาพดี ของใช้ได้",
+      "pickupLocation": "หน้าหอสมุดกลาง",
+      "category": "household",
+      "condition": "like_new",
+      "imageUrl": "https://th.bing.com/th/id/OIP.eAgjkbfl4xOFi-fV9fSLYwHaE8?r=0&o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3",
+      "price": 25000,
+      "contact": {
+        "lineId": "line_nnn",
+        "instagram": "ig_nnn",
+        "phone": "0998887777"
+      },
+      "sellerId": 100,
+      "status": "available",
+      "isHidden": false,
+      "videoUrl": "/api/product-videos/b0e9a85a-b6e2-4aa3-8371-e7273df14daa.mp4",
+      "id": 116
     }
   ],
   "reports": [
@@ -314,8 +334,8 @@
       "reporterId": 1,
       "reason": "inappropriate",
       "details": "ขอให้ผู้ดูแลตรวจสอบข้อความในประกาศตัวอย่างนี้",
-      "status": "pending",
-      "reviewedAt": null,
+      "status": "reviewed",
+      "reviewedAt": "2026-11-20T07:53:14.901Z",
       "productTitle": "ชุดหนังสือพื้นฐาน Java"
     },
     {
@@ -324,8 +344,8 @@
       "reporterId": 2,
       "reason": "other",
       "details": "ขอให้ตรวจสอบว่ารายการอุปกรณ์ที่ให้มาครบตามที่ระบุ",
-      "status": "pending",
-      "reviewedAt": null,
+      "status": "reviewed",
+      "reviewedAt": "2026-11-20T07:52:48.817Z",
       "productTitle": "กล้องดิจิทัลคอมแพกต์"
     },
     {
@@ -340,6 +360,6 @@
     }
   ],
   "meta": {
-    "lastProductId": 115
+    "lastProductId": 116
   }
 }

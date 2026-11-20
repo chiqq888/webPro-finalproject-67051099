@@ -7,6 +7,16 @@ const {
   REPORT_REASONS,
 } = require('../src/data/constants.js');
 const { validateProductContact } = require('../src/data/product-contact.js');
+const {
+  getProductVideoSource,
+  isProductMediaUrlValid,
+} = require('../src/data/product-media.js');
+const {
+  getManagedVideoName,
+  readProductVideoRequest,
+  removeProductVideo,
+  storeProductVideo,
+} = require('./video-storage.cjs');
 
 const derivePassword = promisify(scrypt);
 const unknownAccountSalt = '0'.repeat(32);
@@ -233,19 +243,6 @@ function textWithin(value, minimum, maximum) {
   );
 }
 
-function validImageUrl(value) {
-  if (typeof value !== 'string') return false;
-  if (value.startsWith('/')) {
-    return value.length > 1 && !value.startsWith('//') && !value.includes('\\');
-  }
-  if (!/^https?:\/\//i.test(value)) return false;
-  try {
-    return Boolean(new URL(value).hostname);
-  } catch {
-    return false;
-  }
-}
-
 const productFields = {
   title: (value) => textWithin(value, 3, 100),
   description: (value) => textWithin(value, 10, 2000),
@@ -254,7 +251,8 @@ const productFields = {
     typeof value === 'string' && Object.hasOwn(CATEGORIES, value),
   condition: (value) =>
     typeof value === 'string' && Object.hasOwn(CONDITIONS, value),
-  imageUrl: validImageUrl,
+  imageUrl: isProductMediaUrlValid,
+  videoUrl: (value) => value === '' || Boolean(getProductVideoSource(value)),
   price: (value) =>
     Number.isFinite(value) &&
     value > 0 &&
@@ -289,7 +287,9 @@ function readProductContact(input) {
 function readProductFields(body, required = false) {
   const fields = {};
   for (const [key, validate] of Object.entries(productFields)) {
-    if (!required && !Object.hasOwn(body, key)) continue;
+    if (!Object.hasOwn(body, key) && (!required || key === 'videoUrl')) {
+      continue;
+    }
     const input = body[key];
     const value = typeof input === 'string' ? input.trim() : input;
     if (!validate(value)) return null;
@@ -359,12 +359,97 @@ function handleRead(req, res, state, resource, id) {
   return res.json(path === '/admin/products' ? products : reports);
 }
 
-function createProduct(req, res, next, user) {
+function readProductVideo(req, res, state, name) {
+  const url = `/api${req.path}`;
+  const isAdmin = sessionUser(req, state.accounts)?.role === 'admin';
+  const canView = state.products.some(
+    (product) => product.videoUrl === url && (!product.isHidden || isAdmin),
+  );
+  if (!canView) return sendError(res, 404, 'ไม่พบวิดีโอ');
+
+  return res.sendFile(
+    name,
+    {
+      root: req.app.locals.videoStorageDirectory,
+      headers: { 'X-Content-Type-Options': 'nosniff' },
+    },
+    (error) => {
+      if (!error || res.headersSent || res.destroyed) return;
+      const status = error.statusCode || error.status || 500;
+      sendError(res, status, 'เปิดวิดีโอสินค้าไม่ได้');
+    },
+  );
+}
+
+function cleanUnusedVideos(req, urls) {
+  const { products } = req.app.db.getState();
+  for (const url of urls) {
+    if (!products.some((product) => product.videoUrl === url)) {
+      removeProductVideo(req.app.locals.videoStorageDirectory, url).catch(
+        (error) => console.warn('ลบไฟล์วิดีโอที่ไม่ได้ใช้งานไม่สำเร็จ', error.code),
+      );
+    }
+  }
+}
+
+function nextWithVideoCleanup(req, res, next, ...urls) {
+  const managedUrls = urls.filter(getManagedVideoName);
+  if (managedUrls.length) {
+    res.once('close', () => cleanUnusedVideos(req, managedUrls));
+  }
+  return next();
+}
+
+function canManageProduct(res, product, user) {
+  if (user.role !== 'user') {
+    sendError(res, 403, memberOnlyMessage);
+    return false;
+  }
+  if (!product || (product.isHidden && product.sellerId !== user.id)) {
+    sendError(res, 404, 'ไม่พบประกาศ');
+    return false;
+  }
+  if (product.sellerId !== user.id) {
+    sendError(res, 403, 'จัดการประกาศของผู้ใช้อื่นไม่ได้');
+    return false;
+  }
+  return true;
+}
+
+async function saveVideoAndProduct(req, res, next, video, productId) {
+  let url;
+  try {
+    url = await storeProductVideo(req.app.locals.videoStorageDirectory, video);
+  } catch {
+    if (!res.destroyed) sendError(res, 500, 'บันทึกไฟล์วิดีโอไม่สำเร็จ');
+    return;
+  }
+
+  if (res.destroyed) return cleanUnusedVideos(req, [url]);
+  const state = req.app.db.getState();
+  const user = sessionUser(req, state.accounts);
+  const product = state.products.find((item) => item.id === productId);
+  if (!user || user.role !== 'user') {
+    cleanUnusedVideos(req, [url]);
+    return sendError(res, 401, 'กรุณาเข้าสู่ระบบ');
+  }
+  if (productId !== undefined && !canManageProduct(res, product, user)) {
+    return cleanUnusedVideos(req, [url]);
+  }
+
+  req.body.videoUrl = url;
+  return nextWithVideoCleanup(req, res, next, url, product?.videoUrl);
+}
+
+function createProduct(req, res, next, user, video) {
   if (!hasOnlyFields(req.body, productFieldNames)) {
     return sendError(res, 400, 'ส่งได้เฉพาะข้อมูลประกาศ');
   }
   const fields = readProductFields(req.body, true);
   if (!fields) return sendError(res, 400, 'ข้อมูลประกาศไม่ครบหรือไม่ถูกต้อง');
+  if (getManagedVideoName(fields.videoUrl)) {
+    return sendError(res, 400, 'กรุณาเลือกไฟล์วิดีโอเพื่ออัปโหลด');
+  }
   const { contact, error } = readProductContact(req.body.contact);
   if (error) return sendError(res, 400, error);
 
@@ -375,10 +460,11 @@ function createProduct(req, res, next, user) {
     status: 'available',
     isHidden: false,
   };
+  if (video) return saveVideoAndProduct(req, res, next, video);
   return next();
 }
 
-function manageProduct(req, res, next, product, user) {
+function manageProduct(req, res, next, product, user, video) {
   const isVisibilityChange =
     req.method === 'PATCH' && Object.hasOwn(req.body, 'isHidden');
   if (isVisibilityChange) {
@@ -396,20 +482,22 @@ function manageProduct(req, res, next, product, user) {
     return next();
   }
 
-  if (user.role !== 'user') return sendError(res, 403, memberOnlyMessage);
-  if (!product || (product.isHidden && product.sellerId !== user.id)) {
-    return sendError(res, 404, 'ไม่พบประกาศ');
+  if (!canManageProduct(res, product, user)) return;
+  if (req.method === 'DELETE') {
+    return nextWithVideoCleanup(req, res, next, product.videoUrl);
   }
-  if (product.sellerId !== user.id) {
-    return sendError(res, 403, 'จัดการประกาศของผู้ใช้อื่นไม่ได้');
-  }
-  if (req.method === 'DELETE') return next();
 
   if (!hasOnlyFields(req.body, [...productFieldNames, 'status'])) {
     return sendError(res, 400, 'ระบุได้เฉพาะข้อมูลประกาศและสถานะการขาย');
   }
   const fields = readProductFields(req.body);
   if (!fields) return sendError(res, 400, 'ข้อมูลประกาศไม่ถูกต้อง');
+  if (
+    getManagedVideoName(fields.videoUrl) &&
+    fields.videoUrl !== product.videoUrl
+  ) {
+    return sendError(res, 400, 'กรุณาเลือกไฟล์วิดีโอเพื่ออัปโหลด');
+  }
   if (Object.hasOwn(req.body, 'contact')) {
     const { contact, error } = readProductContact(req.body.contact);
     if (error) return sendError(res, 400, error);
@@ -425,11 +513,42 @@ function manageProduct(req, res, next, product, user) {
     }
     fields.status = status;
   }
-  if (!Object.keys(fields).length) {
+  if (!video && !Object.keys(fields).length) {
     return sendError(res, 400, 'กรุณาระบุข้อมูลที่ต้องการเปลี่ยน');
   }
   req.body = fields;
-  return next();
+  if (video) return saveVideoAndProduct(req, res, next, video, product.id);
+  if (fields.videoUrl === undefined) return next();
+  return nextWithVideoCleanup(req, res, next, product.videoUrl);
+}
+
+async function handleProductUpload(req, res, next, productId) {
+  let upload;
+  try {
+    upload = await readProductVideoRequest(req);
+  } catch (error) {
+    if (!res.destroyed) {
+      sendError(
+        res,
+        error.status || 500,
+        error.status ? error.message : 'อ่านไฟล์วิดีโอไม่สำเร็จ',
+      );
+    }
+    return;
+  }
+  if (res.destroyed) return;
+
+  const state = req.app.db.getState();
+  const user = sessionUser(req, state.accounts);
+  if (!user) return sendError(res, 401, 'กรุณาเข้าสู่ระบบ');
+  req.body = upload.body;
+  if (productId === undefined) {
+    if (user.role !== 'user') return sendError(res, 403, memberOnlyMessage);
+    return createProduct(req, res, next, user, upload.video);
+  }
+
+  const product = state.products.find((item) => item.id === productId);
+  return manageProduct(req, res, next, product, user, upload.video);
 }
 
 function createReport(req, res, next, state, user) {
@@ -496,6 +615,10 @@ module.exports = function campusAccess(req, res, next) {
   if (match && !isPositiveId(id)) return sendError(res, 404, 'ไม่พบข้อมูล');
 
   const state = req.app.db.getState();
+  const videoName = getManagedVideoName(`/api${path}`);
+  if (videoName && (method === 'GET' || method === 'HEAD')) {
+    return readProductVideo(req, res, state, videoName);
+  }
   if (method === 'GET') return handleRead(req, res, state, resource, id);
 
   const isLogin = method === 'POST' && path === '/auth/login';
@@ -529,6 +652,15 @@ module.exports = function campusAccess(req, res, next) {
   if (!isPublicAuth && !user) return sendError(res, 401, 'กรุณาเข้าสู่ระบบ');
   if ((isProductCreate || isReportCreate) && user.role !== 'user') {
     return sendError(res, 403, memberOnlyMessage);
+  }
+  if (
+    (isProductCreate || (isProductChange && method === 'PATCH')) &&
+    req.is('multipart/form-data')
+  ) {
+    if (isProductCreate) return handleProductUpload(req, res, next);
+    const product = state.products.find((item) => item.id === id);
+    if (!canManageProduct(res, product, user)) return;
+    return handleProductUpload(req, res, next, id);
   }
   if (
     method !== 'DELETE' &&

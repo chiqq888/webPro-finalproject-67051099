@@ -9,11 +9,12 @@ const proxy = {
     rewrite: (path) => path.slice(4),
   },
 };
-const databaseFiles = [
+const privateFiles = [
   '**/db.json',
   '**/.~db.json',
   '**/db-*.json',
   '**/.~db-*.json',
+  '**/uploads/**',
 ];
 
 export default defineConfig({
@@ -28,14 +29,14 @@ export default defineConfig({
         '.npmrc',
         '.yarnrc.yml',
         '**/.git/**',
-        ...databaseFiles,
+        ...privateFiles,
         '**/server/**',
         '**/README.md',
       ],
     },
     watch: {
-      // JSON Server เขียนข้อมูลเองระหว่างใช้งาน จึงไม่ต้องรีโหลดหน้า
-      ignored: databaseFiles,
+      // การเขียนฐานข้อมูลหรือไฟล์อัปโหลดไม่ต้องรีโหลดหน้า
+      ignored: privateFiles,
     },
   },
   preview: { proxy },

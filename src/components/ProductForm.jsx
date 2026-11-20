@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CATEGORIES, CONDITIONS } from '../data/constants.js';
 import { validateProductContact } from '../data/product-contact.js';
+import {
+  getProductVideoSource,
+  isProductMediaUrlValid,
+  MAX_PRODUCT_VIDEO_BYTES,
+  PRODUCT_VIDEO_PREFIX,
+} from '../data/product-media.js';
 import SelectControl from './SelectControl.jsx';
 
 const emptyProduct = {
@@ -11,28 +17,33 @@ const emptyProduct = {
   category: '',
   condition: '',
   imageUrl: '',
+  videoUrl: '',
   pickupLocation: '',
 };
 
 const fieldClass = 'field-control mt-2 aria-invalid:border-red-600';
 const labelClass = 'block text-sm font-semibold text-slate-800';
+const maxVideoSizeMb = MAX_PRODUCT_VIDEO_BYTES / 1_000_000;
 
-function isImageUrlValid(imageUrl) {
-  if (imageUrl.startsWith('/')) {
-    return (
-      imageUrl.length > 1 &&
-      !imageUrl.startsWith('//') &&
-      !imageUrl.includes('\\')
-    );
+function isSupportedVideoFile(file) {
+  const extension = /\.(mp4|webm)$/i.exec(file.name)?.[1]?.toLowerCase();
+  return (
+    Boolean(extension) &&
+    (!file.type ||
+      file.type === 'application/octet-stream' ||
+      file.type === `video/${extension}`)
+  );
+}
+
+function validateVideoFile(file) {
+  if (!file) return '';
+  if (!isSupportedVideoFile(file) || file.size === 0) {
+    return 'เลือกไฟล์วิดีโอ MP4 หรือ WebM ที่เปิดเล่นได้';
   }
-
-  if (!/^https?:\/\//i.test(imageUrl)) return false;
-
-  try {
-    return Boolean(new URL(imageUrl).hostname);
-  } catch {
-    return false;
+  if (file.size > MAX_PRODUCT_VIDEO_BYTES) {
+    return `เลือกไฟล์วิดีโอขนาดไม่เกิน ${maxVideoSizeMb} MB`;
   }
+  return '';
 }
 
 function validateProduct(product, priceText) {
@@ -54,8 +65,11 @@ function validateProduct(product, priceText) {
   if (!Object.hasOwn(CONDITIONS, product.condition)) {
     errors.condition = 'เลือกสภาพสินค้า';
   }
-  if (!isImageUrlValid(product.imageUrl)) {
+  if (!isProductMediaUrlValid(product.imageUrl)) {
     errors.imageUrl = 'ใส่ URL แบบ http/https หรือ path รูปในโปรเจกต์ที่ขึ้นต้นด้วย /';
+  }
+  if (product.videoUrl && !getProductVideoSource(product.videoUrl)) {
+    errors.videoUrl = 'ใส่ลิงก์คลิป YouTube หรือลิงก์ไฟล์วิดีโอให้ถูกต้อง';
   }
   if (
     product.pickupLocation.length < 2 ||
@@ -86,6 +100,10 @@ export default function ProductForm({
   error,
   submitLabel,
 }) {
+  const existingVideoUrl =
+    typeof initialProduct.videoUrl === 'string' ? initialProduct.videoUrl : '';
+  const hasUploadedVideo = existingVideoUrl.startsWith(PRODUCT_VIDEO_PREFIX);
+  const initialLink = hasUploadedVideo ? '' : existingVideoUrl;
   const [product, setProduct] = useState(() => ({
     title: initialProduct.title,
     description: initialProduct.description,
@@ -93,12 +111,31 @@ export default function ProductForm({
     category: initialProduct.category,
     condition: initialProduct.condition,
     imageUrl: initialProduct.imageUrl,
+    videoUrl: initialLink,
     pickupLocation: initialProduct.pickupLocation,
     lineId: initialProduct.contact?.lineId ?? '',
     instagram: initialProduct.contact?.instagram ?? '',
     phone: initialProduct.contact?.phone ?? '',
   }));
   const [errors, setErrors] = useState({});
+  const [videoFile, setVideoFile] = useState(null);
+  const [removeUploadedVideo, setRemoveUploadedVideo] = useState(false);
+  const videoFileInput = useRef(null);
+
+  function selectVideoFile(file) {
+    setVideoFile(file);
+    setErrors((previous) => ({
+      ...previous,
+      videoFile: validateVideoFile(file),
+      videoUrl: '',
+    }));
+  }
+
+  function clearVideoFile() {
+    videoFileInput.current.value = '';
+    videoFileInput.current.focus();
+    selectVideoFile(null);
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -117,6 +154,7 @@ export default function ProductForm({
     if (saving) return;
 
     const priceText = product.price.trim();
+    const videoUrl = product.videoUrl.trim();
     // ส่งเฉพาะช่องที่ผู้ขายแก้ได้ เพื่อคงเจ้าของและสถานะเดิมไว้
     const productData = {
       title: product.title.trim(),
@@ -132,14 +170,21 @@ export default function ProductForm({
         phone: product.phone.trim(),
       },
     };
+    if (
+      !videoFile &&
+      (removeUploadedVideo || videoUrl !== initialLink.trim())
+    ) {
+      productData.videoUrl = videoUrl;
+    }
     const nextErrors = {
       ...validateProduct(productData, priceText),
       ...validateProductContact(productData.contact),
+      videoFile: validateVideoFile(videoFile),
     };
     setErrors(nextErrors);
     if (Object.values(nextErrors).some(Boolean)) return;
 
-    onSubmit(productData);
+    onSubmit(productData, videoFile);
   }
 
   return (
@@ -281,6 +326,91 @@ export default function ProductForm({
           <FieldError name="imageUrl" errors={errors} />
         </div>
 
+        <fieldset className="min-w-0 rounded-xl border border-stone-200 p-4">
+          <legend className="px-1 text-base font-bold text-slate-900">
+            วิดีโอสินค้า (ไม่บังคับ)
+          </legend>
+          {hasUploadedVideo && !videoFile && !product.videoUrl.trim() && (
+            <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <p className="text-slate-700" role="status">
+                {removeUploadedVideo
+                  ? 'วิดีโอเดิมจะถูกนำออกเมื่อบันทึก'
+                  : 'ประกาศนี้มีวิดีโอที่อัปโหลดแล้ว'}
+              </p>
+              <button
+                className="min-h-9 font-semibold text-orange-800 underline underline-offset-4"
+                type="button"
+                onClick={() => setRemoveUploadedVideo((remove) => !remove)}
+              >
+                {removeUploadedVideo ? 'เก็บวิดีโอเดิมไว้' : 'นำวิดีโอเดิมออก'}
+              </button>
+            </div>
+          )}
+          <div>
+            <label className={labelClass} htmlFor="videoFile">
+              เลือกไฟล์วิดีโอ
+            </label>
+            <input
+              className={`${fieldClass} file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-orange-50 file:px-2.5 file:py-1 file:font-semibold file:text-orange-800`}
+              id="videoFile"
+              name="videoFile"
+              type="file"
+              accept=".mp4,.webm,video/mp4,video/webm"
+              ref={videoFileInput}
+              onChange={(event) =>
+                selectVideoFile(event.target.files[0] ?? null)
+              }
+              aria-invalid={Boolean(errors.videoFile)}
+              aria-describedby={
+                errors.videoFile
+                  ? 'videoFile-hint videoFile-error'
+                  : 'videoFile-hint'
+              }
+            />
+            <p id="videoFile-hint" className="mt-1.5 text-sm text-slate-600">
+              MP4 หรือ WebM ขนาดไม่เกิน {maxVideoSizeMb} MB
+            </p>
+            <FieldError name="videoFile" errors={errors} />
+            {videoFile && (
+              <button
+                className="mt-1 min-h-9 text-sm font-semibold text-orange-800 underline underline-offset-4"
+                type="button"
+                onClick={clearVideoFile}
+              >
+                ยกเลิกไฟล์ที่เลือก
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <label className={labelClass} htmlFor="videoUrl">
+              หรือใส่ลิงก์วิดีโอ
+            </label>
+            <input
+              className={fieldClass}
+              id="videoUrl"
+              name="videoUrl"
+              inputMode="url"
+              value={product.videoUrl}
+              onChange={handleChange}
+              disabled={Boolean(videoFile)}
+              aria-invalid={Boolean(errors.videoUrl)}
+              aria-describedby={
+                errors.videoUrl
+                  ? 'videoUrl-hint videoUrl-error'
+                  : 'videoUrl-hint'
+              }
+              placeholder="https://example.com/clip.mp4 หรือ /videos/clip.mp4"
+            />
+            <p id="videoUrl-hint" className="mt-1.5 text-sm text-slate-600">
+              {videoFile
+                ? 'ระบบจะอัปโหลดไฟล์ที่เลือกเมื่อบันทึก'
+                : 'วางลิงก์คลิป YouTube หรือลิงก์ตรงไปยังไฟล์วิดีโอ เช่น MP4'}
+            </p>
+            <FieldError name="videoUrl" errors={errors} />
+          </div>
+        </fieldset>
+
         <div>
           <label className={labelClass} htmlFor="pickupLocation">
             จุดนัดรับ
@@ -401,7 +531,7 @@ export default function ProductForm({
 
       <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-stone-200 pt-5">
         <button type="submit" disabled={saving} className="btn-primary">
-          {saving ? 'กำลังบันทึก…' : submitLabel}
+          {saving ? (videoFile ? 'กำลังอัปโหลดวิดีโอ…' : 'กำลังบันทึก…') : submitLabel}
         </button>
         <Link className="btn-secondary" to="/users/my-listings">
           ยกเลิก

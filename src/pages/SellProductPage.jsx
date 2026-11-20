@@ -9,14 +9,14 @@ export default function SellProductPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  async function handleSubmit(productData) {
+  async function handleSubmit(productData, videoFile) {
     if (saving) return;
 
     setSaving(true);
     setError('');
 
     try {
-      await createProduct(productData);
+      await createProduct(productData, videoFile);
       navigate('/users/my-listings', { state: { message: 'ลงประกาศสำเร็จ' } });
     } catch (requestError) {
       setError(`ลงประกาศไม่สำเร็จ ${requestError.message}`);
